@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#020711">
+  <title>奇幻城堡冒險</title>
+  <link rel="stylesheet" href="style.css?v=31">
+</head>
+<body>
+  <audio id="gameMusic" src="assets/gameplay-theme-original.wav" preload="auto" loop></audio>
+  <audio id="battleMusic" src="assets/battle-theme-original.wav" preload="auto" loop></audio>
+  <main id="app">
+    <section id="startScreen" class="screen art-screen" aria-label="開始遊戲">
+      <div class="art-frame start-frame">
+        <img class="full-art" src="assets/start-screen.png" alt="奇幻城堡，開始遊戲" draggable="false">
+        <button id="startButton" class="hotspot start-hotspot" aria-label="開始遊戲"></button>
+      </div>
+    </section>
+    <section id="lobbyScreen" class="screen lobby-screen is-hidden" aria-label="多人遊戲大廳">
+      
+      <button id="lobbyBackButton" class="lobby-nav lobby-back" type="button">⌂ 返回開始頁</button>
+      <button id="lobbyHelpButton" class="lobby-nav lobby-help" type="button">📖 遊戲說明</button>
+      <div id="lobbyRooms" class="lobby-rooms" aria-label="四間遊戲房間">
+        <article class="lobby-room room-red" data-room="0"><div class="room-heading"><strong>房間 1</strong><span class="room-status">尚未建立</span></div><div class="room-meta"><span class="room-host">房主：尚未設定</span><span class="room-count">0 / 4</span></div><div class="room-slots"></div><div class="room-controls"><button class="room-create" type="button">建立房間</button><button class="room-enter" type="button">進入</button><button class="room-settings is-hidden" type="button">房主設定</button><button class="room-start is-hidden" type="button">開始遊戲</button></div></article>
+        <article class="lobby-room room-blue" data-room="1"><div class="room-heading"><strong>房間 2</strong><span class="room-status">尚未建立</span></div><div class="room-meta"><span class="room-host">房主：尚未設定</span><span class="room-count">0 / 4</span></div><div class="room-slots"></div><div class="room-controls"><button class="room-create" type="button">建立房間</button><button class="room-enter" type="button">進入</button><button class="room-settings is-hidden" type="button">房主設定</button><button class="room-start is-hidden" type="button">開始遊戲</button></div></article>
+        <article class="lobby-room room-green" data-room="2"><div class="room-heading"><strong>房間 3</strong><span class="room-status">尚未建立</span></div><div class="room-meta"><span class="room-host">房主：尚未設定</span><span class="room-count">0 / 4</span></div><div class="room-slots"></div><div class="room-controls"><button class="room-create" type="button">建立房間</button><button class="room-enter" type="button">進入</button><button class="room-settings is-hidden" type="button">房主設定</button><button class="room-start is-hidden" type="button">開始遊戲</button></div></article>
+        <article class="lobby-room room-purple" data-room="3"><div class="room-heading"><strong>房間 4</strong><span class="room-status">尚未建立</span></div><div class="room-meta"><span class="room-host">房主：尚未設定</span><span class="room-count">0 / 4</span></div><div class="room-slots"></div><div class="room-controls"><button class="room-create" type="button">建立房間</button><button class="room-enter" type="button">進入</button><button class="room-settings is-hidden" type="button">房主設定</button><button class="room-start is-hidden" type="button">開始遊戲</button></div></article>
+      </div>
+      
+      
+      <div id="lobbyModal" class="lobby-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="lobbyModalTitle">
+        <div class="lobby-modal-card"><button id="lobbyModalClose" class="lobby-modal-close" type="button" aria-label="關閉">×</button><h2 id="lobbyModalTitle">建立房間</h2><p id="lobbyModalHint">設定房間資訊</p><form id="lobbyForm"><label id="lobbyNameLabel">房主名稱<input id="lobbyHostName" maxlength="12" value="冒險者" autocomplete="nickname"></label><label id="lobbyPasswordLabel">房間密碼<input id="lobbyPassword" type="password" minlength="1" maxlength="12" placeholder="設定房間密碼" autocomplete="new-password"></label><label id="lobbyNpcLabel">NPC 數量<select id="lobbyNpcCount"><option value="0">0 位 NPC（其他位置等待真人）</option><option value="1">1 位 NPC</option><option value="2">2 位 NPC</option><option value="3" selected>3 位 NPC（單人冒險）</option></select></label><p id="lobbyFormError" class="lobby-form-error" aria-live="polite"></p><div class="lobby-modal-actions"><button id="lobbyCancel" type="button" class="lobby-secondary">取消</button><button id="lobbySubmit" type="submit" class="lobby-primary">確認</button></div></form></div>
+      </div>
+      <div id="lobbyInfoModal" class="lobby-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="lobbyInfoTitle"><div class="lobby-modal-card"><button id="lobbyInfoClose" class="lobby-modal-close" type="button" aria-label="關閉">×</button><h2 id="lobbyInfoTitle">房間說明</h2><p id="lobbyInfoText">棋盤戰鬥遊戲，每位玩家共有三條生命，若有一方三條生命都用盡，就會結束遊戲。</p><div class="lobby-modal-actions"><button id="lobbyInfoOk" type="button" class="lobby-primary">知道了</button></div></div></div>
+    </section>
+    <section id="characterScreen" class="screen art-screen is-hidden" aria-label="角色選擇">
+      <div class="art-frame character-frame">
+        <video id="characterArtwork" class="full-art character-artwork" src="assets/character-select-odyssey.mp4" autoplay loop muted playsinline preload="auto" aria-label="驅魔獵人（奧德賽）角色選擇動畫"></video>
+        <div id="characterFxLayer" class="character-fx-layer fx-odyssey" aria-hidden="true">
+          <div class="fx-bats"><span>🦇</span><span>🦇</span><span>🦇</span><span>🦇</span><span>🦇</span></div>
+          <div class="fx-arrow"><i></i><b></b><em></em></div>
+          <div class="fx-orb"><i></i><b></b><em></em></div>
+          <div class="fx-lightning"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div id="characterStatsOverlay" class="character-stats-overlay" aria-live="polite" aria-label="角色基本能力"></div>
+        <div class="character-hotspots" role="group" aria-label="選擇角色">
+          <button class="hotspot character-hotspot" data-character="druid" aria-label="選擇暗夜吸血鬼（德魯伊）"></button>
+          <button class="hotspot character-hotspot" data-character="odyssey" aria-label="選擇驅魔獵人（奧德賽）"></button>
+          <button class="hotspot character-hotspot" data-character="lucifer" aria-label="選擇混沌惡魔（露西法）"></button>
+          <button class="hotspot character-hotspot" data-character="lycan" aria-label="選擇狂暴狼人（萊肯）"></button>
+        </div>
+        <button id="confirmCharacter" class="hotspot confirm-hotspot" aria-label="決定角色"></button>
+      </div>
+    </section>
+    <section id="mapScreen" class="screen map-screen is-hidden" aria-label="遊戲地圖">
+      <div id="mapBackdrop" class="map-backdrop"></div>
+      <div id="mapViewport" class="map-viewport" tabindex="0" aria-label="完整棋盤地圖">
+        <div id="boardStage">
+          <img id="boardImage" src="assets/map-day.jpg" alt="奇幻城堡冒險棋盤地圖" draggable="false">
+          <div id="playerTokens" aria-label="棋盤上的玩家角色"></div>
+          <button id="coinActionButton" class="board-action-hotspot coin-action-hotspot" aria-label="領取金幣" title="領取金幣" disabled></button>
+          <button id="skillActionButton" class="board-action-hotspot skill-action-hotspot" aria-label="抽取招式" title="抽取招式" disabled></button>
+        </div>
+      </div>
+      <aside class="player-panel game-panel" aria-label="玩家人數設定">
+        <label class="player-count-label is-hidden" for="playerCount">玩家人數</label>
+        <select id="playerCount" class="is-hidden" aria-label="玩家人數"><option value="2" selected>2 位</option><option value="3">3 位</option><option value="4">4 位</option></select>
+        <button id="battleStartButton" class="battle-start-button">開戰</button>
+        <div id="selfLivesDisplay" class="self-lives-display" aria-label="自身玩家剩餘生命"><span class="lives-label">我的生命</span><div id="selfLifeHearts" class="self-life-hearts"><span aria-hidden="true">♥</span><span aria-hidden="true">♥</span><span aria-hidden="true">♥</span></div></div>
+        <small id="readyStatus" class="ready-status is-hidden">所有玩家準備完成後開始</small>
+      </aside>
+      <aside id="selfStatusPanel" class="self-status-panel is-collapsed" aria-label="1P 自身角色狀況">
+        <button id="selfStatusToggle" class="self-status-toggle" type="button" aria-label="展開完整狀態" aria-expanded="false" aria-controls="selfStatusDetails"><span class="status-toggle-icon" aria-hidden="true">▶</span></button>
+        <div id="selfStatusDetails" class="self-status-details">
+        <div class="self-status-heading"><span class="self-player-tag">1P</span><div><strong>我的角色</strong><small id="selfCharacterName">驅魔獵人（奧德賽）</small></div></div>
+        <div class="self-stats">
+          <div class="stat-pill hp-stat"><small>HP</small><strong id="selfHP">25/25</strong></div>
+          <div class="stat-pill attack-stat"><small>攻擊</small><strong id="selfAttack">11</strong></div>
+          <div class="stat-pill defense-stat"><small>防禦</small><strong id="selfDefense">3</strong></div>
+          <div class="stat-pill coin-stat"><small>金幣</small><strong id="selfCoins">0</strong></div>
+        </div>
+        <div id="selfDodgeStatus" class="self-dodge-status"><span aria-hidden="true">🌪</span> 疾風閃避 <strong id="selfDodgeCount">0</strong> 次</div>
+        <div class="skill-slots-heading">技能欄 <small>最多 4 招（含基本技能）</small></div>
+        <div id="selfSkillSlots" class="self-skill-slots"></div>
+        <div class="inventory-heading">冒險道具</div><div id="selfInventory" class="self-inventory"><small>尚未持有道具</small></div>
+        <div id="selfStatusNote" class="self-status-note">自己的數值只顯示於此面板</div>
+        </div>
+      </aside>
+      <div id="routeChoiceModal" class="route-choice-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="routeChoiceTitle">
+        <div class="route-choice-card">
+          <div id="routeChoiceTitle" class="route-choice-title">選擇行進路線</div>
+          <div class="route-choice-description">接下來要走哪一條路？</div>
+          <div class="route-choice-actions">
+            <button id="chooseMiddle" class="route-choice-button middle-choice">走中路</button>
+            <button id="chooseOuter" class="route-choice-button outer-choice">走外圍</button>
+          </div>
+        </div>
+      </div>
+      <div id="actionModal" class="action-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="actionModalTitle">
+        <div class="action-modal-card">
+          <button id="closeActionModal" class="modal-close" aria-label="關閉">×</button>
+          <div id="actionModalTitle" class="action-modal-title">招式獲得</div>
+          <img id="actionSkillImage" class="action-skill-image" alt="" hidden>
+          <strong id="actionSkillName" class="action-skill-name"></strong>
+          <p id="actionSkillDescription" class="action-skill-description"></p>
+          <div id="actionSkillBatch" class="action-skill-batch is-hidden" aria-label="本次獲得的招式"></div>
+          <div id="coinEventGrid" class="coin-event-grid is-hidden" aria-live="polite"></div>
+          <div id="replacementChoices" class="replacement-choices is-hidden" aria-label="選擇要替換的技能"></div>
+          <div class="action-modal-buttons"><button id="acceptActionButton" class="route-choice-button middle-choice">收下</button><button id="cancelActionButton" class="route-choice-button outer-choice">返回</button></div>
+        </div>
+      </div>
+
+      <div id="shopModal" class="shop-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
+        <div class="shop-window">
+          <button id="shopCloseX" class="shop-close-x" type="button" aria-label="離開商店">×</button>
+          <div class="shop-hanging-sign"><span id="shopTitle">冒險商店</span></div>
+          <div class="shop-topline"><div class="shop-subtitle">補給你的冒險旅程</div><div class="shop-wallet"><img src="assets/coin-icon.svg" alt="金幣"><strong id="shopCoins">0</strong></div></div>
+          <div class="shop-timer-wrap"><span id="shopTimerText">剩餘 15 秒</span><div class="shop-timer-track"><i id="shopTimerBar"></i></div></div>
+          <div class="shop-items">
+            <article class="shop-item" data-shop-item="potion"><div class="shop-item-title">紅色藥水</div><div class="shop-item-art potion-art" aria-hidden="true">🧪</div><p>立即恢復 HP +5</p><div class="shop-item-price"><img src="assets/coin-icon.svg" alt="">100</div><small id="shopPotionCount">持有 0/2</small><button class="shop-buy-button" data-buy-item="potion">購買</button></article>
+            <article class="shop-item" data-shop-item="wind"><div class="shop-item-title">疾風</div><div class="shop-item-art wind-art" aria-hidden="true">🌪️</div><p>拒絕對決 1 次</p><div class="shop-item-price"><img src="assets/coin-icon.svg" alt="">1,000</div><small id="shopWindCount">持有 0/2</small><button class="shop-buy-button" data-buy-item="wind">購買</button></article>
+            <article class="shop-item" data-shop-item="invisibility"><div class="shop-item-title">隱身術</div><div class="shop-item-art invis-art" aria-hidden="true">👻</div><p>隱形 2 回合</p><div class="shop-item-price"><img src="assets/coin-icon.svg" alt="">2,000</div><small id="shopInvisibilityCount">持有 0/2</small><button class="shop-buy-button" data-buy-item="invisibility">購買</button></article>
+          </div>
+          <div class="shop-footer"><span id="shopHint">每種道具本次限購 1 個，最多持有 2 個。</span><button id="shopLeaveButton" type="button">離開商店</button></div>
+        </div>
+      </div>
+      <div id="duelModal" class="duel-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="duelTitle">
+        <div class="duel-card">
+          <div class="duel-heading"><span id="duelTitle">玩家對決</span><div class="duel-heading-actions"><button id="battleMusicToggle" class="battle-music-toggle" type="button" aria-pressed="true">♫ 戰鬥音樂：開</button><button id="closeDuelButton" class="modal-close" aria-label="關閉" disabled>×</button></div></div>
+          <div id="duelTargetPicker" class="duel-target-picker is-hidden"><label for="duelTargetSelect">同格有多位玩家，請選擇對決對象</label><select id="duelTargetSelect"></select></div>
+          <div class="duel-versus">
+            <div class="duel-side duel-left"><strong id="duelLeftName">1P</strong><div class="duel-side-stats" id="duelLeftStats"></div><img id="duelLeftPortrait" alt="自身玩家"><div id="duelLeftDie" class="duel-die">?</div><div id="duelLeftSkills" class="duel-side-skills" aria-label="自身技能"></div></div>
+            <div class="duel-vs-mark">VS</div>
+            <div class="duel-side duel-right"><strong id="duelRightName">2P</strong><div class="duel-side-stats" id="duelRightStats"></div><img id="duelRightPortrait" alt="對手玩家"><div id="duelRightDie" class="duel-die">?</div><div id="duelRightSkills" class="duel-side-skills" aria-label="對手技能"></div></div>
+          </div>
+          <div class="duel-dice-row"><button id="duelRollButton" class="roll-button duel-roll-button">擲對決骰</button></div>
+          <div id="duelStatus" class="duel-status">雙方擲骰比大小，點數較高者先攻。</div><div id="duelSkillFlash" class="duel-skill-flash is-hidden" aria-hidden="true"><img id="duelSkillFlashImage" alt=""><strong id="duelSkillFlashName"></strong></div>
+          <div id="duelSkillPicker" class="duel-skill-picker is-hidden"><label for="duelSkillSelect">選擇本回合施放的技能</label><select id="duelSkillSelect"></select><p id="duelSkillDescription" class="duel-skill-description"></p><button id="duelUseSkill" class="roll-button">施放技能</button></div>
+          <button id="duelContinueButton" class="route-choice-button outer-choice is-hidden">繼續對決</button>
+          <div class="duel-escape-row"><button id="duelEscapeLeft" class="route-choice-button outer-choice is-hidden">自身玩家逃跑</button><button id="duelEscapeRight" class="route-choice-button outer-choice is-hidden">自身玩家逃跑</button></div>
+        </div>
+      </div>
+      <div id="playerSelectionBanner" class="player-selection-banner is-hidden" role="status"><strong id="playerSelectionText">選擇任一玩家</strong><small id="playerSelectionHint">點選地圖上的玩家</small><button id="cancelPlayerSelection" class="route-choice-button outer-choice">PASS／取消</button></div>
+      <div id="pauseOverlay" class="pause-overlay is-hidden" role="status" aria-live="polite"><div class="pause-card"><strong>遊戲暫停中</strong><span id="pauseCountdown">60 秒後自動恢復</span></div></div>
+      <aside class="dice-panel game-panel" aria-label="擲骰與回合">
+        <div id="roundLabel" class="round-label">第 1 回合</div>
+        <div id="phaseLabel" class="phase-label">☀ 白天</div>
+        <div id="turnLabel" class="turn-label">玩家 1 的回合</div>
+        <div id="dieStage" class="die-stage" role="button" tabindex="0" aria-label="擲骰子"><div id="cube" class="cube">
+          <div class="face front" data-n="1"></div><div class="face back" data-n="6"></div><div class="face right" data-n="3"></div><div class="face left" data-n="4"></div><div class="face top" data-n="2"></div><div class="face bottom" data-n="5"></div>
+        </div></div>
+        <div id="rollResult" class="roll-result">10 秒內未擲骰將自動擲出</div>
+        <div id="autoRollCountdown" class="auto-roll-countdown">自動擲骰倒數：10 秒</div>
+        <button id="rollButton" class="roll-button">擲骰子</button>
+        <button id="pauseButton" class="reset-button">暫停（剩餘 3 次）</button>
+      </aside>
+    </section>
+  </main>
+  <div id="gameOverModal" class="game-over-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+        <div class="game-over-card">
+          <div class="game-over-emblem" aria-hidden="true">🏆</div>
+          <h2 id="gameOverTitle">冒險結束</h2>
+          <p id="gameOverReason">有玩家的三條生命已用盡，遊戲結束。</p>
+          <h3>冒險者排名</h3>
+          <ol id="gameOverRankings" class="game-over-rankings"></ol>
+          <button id="gameOverReturnButton" class="route-choice-button middle-choice" type="button">返回開始頁</button>
+        </div>
+      </div>
+  <script src="app.js?v=31"></script>
+</body>
+</html>
