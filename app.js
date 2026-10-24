@@ -109,7 +109,7 @@
     function renderPlayers(){playerTokens.innerHTML='';players.forEach((p,i)=>{const token=document.createElement('img');token.className='player-token'+(i===currentPlayer?' is-active':'');token.src=characters[p.character].gif;token.alt=`玩家 ${i+1}：${characters[p.character].name}`;token.draggable=false;p.token=token;playerTokens.appendChild(token);});positionAllTokens();renderSelfStatus();updateTurnUI();}
   function createPlayers(count){clearCountdown();availableSkills=[...skills];pendingSkills=[];pendingSkillReplacements=[];const opponents=characterOrder.filter(id=>id!==selectedCharacter);players=[selectedCharacter,...opponents].slice(0,count).map((character,index)=>{const c=characters[character];return{character,position:0,token:null,label:`玩家 ${index+1}`,controlType:index===0?'local':'npc',lives:3,nextRoute:null,middleDirection:0,forcedOuterJunction:false,hp:c.hp,maxHP:c.hp,baseHP:c.hp,attack:c.attack,defense:c.defense,coins:0,inventory:{potion:0,wind:0,invisibility:0},invisibilityTurns:0,skills:[{name:c.baseSkill,base:true,image:c.baseImage,desc:'角色基本技能；效果依照角色基本攻擊規則。'}],lapRewards:0,hasClaimedLap:false,lapsCompleted:0,pauseUses:0,attackBonus:0,attackBonusTurns:0,regenTurns:0,regenActive:false,poisonTurns:0,defenseDrainTurns:0,stunnedTurns:0,sealedTurns:0,immuneNext:false,dodgeDuel:0};});currentPlayer=0;round=1;night=false;busy=false;pendingTurnAction=false;pauseActive=false;completingPendingAction=false;gameStarted=false;gameOver=false;gameOverModal.classList.add('is-hidden');window.setMapTime('day');renderPlayers();rollResult.textContent='請所有玩家準備完成，再按「開戰」';cube.style.transform='rotateX(-22deg) rotateY(-28deg)';battleStartButton.classList.remove('is-hidden');readyStatus.textContent=`${count} 位玩家已準備`;updateTurnUI();}
   function updateBoardActions(){const p=players[currentPlayer];const skillReady=!!p&&isSkillTile(p.position)&&availableSkills.length>0;const coinReady=!!p&&(coinTiles.has(p.position)||p.lapRewards>0||(isSkillTile(p.position)&&availableSkills.length===0));skillActionButton.disabled=busy||!skillReady||!pendingTurnAction;coinActionButton.disabled=busy||!coinReady||!pendingTurnAction;skillActionButton.title=availableSkills.length?`抽取招式（剩餘 ${availableSkills.length} 種）`:'招式已抽完，改抽金幣';}
-  function updateTurnUI(){roundLabel.textContent=`第 ${round} 回合`;phaseLabel.textContent=night?'☾ 夜晚':'☀ 白天';const p=players[currentPlayer];turnLabel.textContent=p?`玩家 ${currentPlayer+1}｜${characters[p.character].name}${p.controlType==='npc'?'（NPC）':''}`:'等待玩家';positionAllTokens();renderSelfStatus();updateBoardActions();const disabled=!gameStarted||busy||pendingTurnAction||!p||p.controlType==='npc'||pauseActive||!!duelState;rollButton.disabled=disabled;dieStage.setAttribute('aria-disabled',String(disabled));playerCount.disabled=gameStarted||busy||pendingTurnAction||pauseActive||!!duelState;pauseButton.disabled=!p||p.controlType==='npc'||pauseActive||p.pauseUses>=3||busy||!!duelState||pendingTurnAction||!gameStarted;pauseButton.textContent=pauseActive?'暫停中…':`暫停（剩餘 ${p?3-p.pauseUses:3} 次）`;}
+  function updateTurnUI(){roundLabel.textContent=`第 ${round} 回合`;phaseLabel.textContent=night?'☾ 夜晚':'☀ 白天';const p=players[currentPlayer];turnLabel.textContent=p?`${p.label||`玩家 ${currentPlayer+1}`}｜${characters[p.character].name}${p.controlType==='npc'?'（NPC）':''}`:'等待玩家';positionAllTokens();renderSelfStatus();updateBoardActions();const disabled=!gameStarted||busy||pendingTurnAction||!p||p.controlType!=='local'||pauseActive||!!duelState;rollButton.disabled=disabled;dieStage.setAttribute('aria-disabled',String(disabled));playerCount.disabled=gameStarted||busy||pendingTurnAction||pauseActive||!!duelState;pauseButton.disabled=!p||p.controlType!=='local'||pauseActive||p.pauseUses>=3||busy||!!duelState||pendingTurnAction||!gameStarted;pauseButton.textContent=pauseActive?'暫停中…':`暫停（剩餘 ${p?3-p.pauseUses:3} 次）`;}
   function isJunction(pos){return pos===8||pos===23;}
   function routeLabel(pos){return pos===8?'右下角「選擇方向」':'左上角「選擇方向」';}
   async function chooseRoute(p,junction){if(p.controlType==='npc'){await wait(350);const route=Math.random()<.42?'middle':'outer';p.nextRoute=route;rollResult.textContent=`NPC 選擇${route==='middle'?'中路':'外圍'}`;return route;}return new Promise(resolve=>{routeChoiceTitle.textContent=`${routeLabel(junction)}：請選擇路線`;routeChoiceModal.classList.remove('is-hidden');chooseMiddleButton.focus();const cleanup=()=>{routeChoiceModal.classList.add('is-hidden');chooseMiddleButton.removeEventListener('click',onMiddle);chooseOuterButton.removeEventListener('click',onOuter);};const onMiddle=()=>{p.nextRoute='middle';cleanup();resolve('middle');};const onOuter=()=>{p.nextRoute='outer';cleanup();resolve('outer');};chooseMiddleButton.addEventListener('click',onMiddle);chooseOuterButton.addEventListener('click',onOuter);});}
@@ -197,7 +197,9 @@
         }
       }
       busy=false;updateTurnUI();
+      await publishOnlineState();
       await resolveLanding(active);
+      await publishOnlineState();
       if(active._duelEscaped){active._duelEscaped=false;finishTurn();return;}
       const deferCollisionUntilAfterAction=canAct(active)&&!active._skipLandingAction;
       if(!deferCollisionUntilAfterAction){const endedByDuel=await resolveLandingCollision(active);if(endedByDuel){finishTurn();return;}}
@@ -386,7 +388,8 @@
     }
     finishingTurn=false;
     updateTurnUI();
-    if(gameStarted){startTurnCountdown();if(players[currentPlayer]?.controlType==='npc'){
+    publishOnlineState();
+    if(gameStarted){if(players[currentPlayer]?.controlType==='local')startTurnCountdown();if(players[currentPlayer]?.controlType==='npc'){
       clearCountdown();window.setTimeout(()=>{if(!busy&&!pendingTurnAction&&!pauseActive&&!duelState&&players[currentPlayer]?.controlType==='npc')runRoll(players[currentPlayer]);},700);
     }}
   }
@@ -480,6 +483,76 @@
   const lobbyInfoModal=$('lobbyInfoModal');
   const lobbyRooms=Array.from({length:4},(_,i)=>({index:i,active:false,host:'',password:'',npcCount:3,slots:[],status:'尚未建立'}));
   let lobbyModalMode='create',lobbyModalRoom=0,activeRoomIndex=-1,lobbyIsHost=false,lobbyNpcCount=3;
+
+  // Phase 2 test: Supabase Realtime presence + shared board snapshots.
+  // This synchronizes the same map, turn owner, positions, dice result and core stats.
+  // It is a testing build; complex duels/skill prompts still need server-authoritative rules.
+  let onlineGameChannel=null, onlineGameRoomId=null, onlineGameRoster=[], applyingOnlineState=false, onlinePlayerName='冒險者';
+  const ONLINE_PLAYER_FIELDS=['position','middleDirection','forcedOuterJunction','lapsCompleted','lapRewards','hasClaimedLap','hp','maxHP','baseHP','attack','defense','coins','lives','invisibilityTurns','attackBonus','attackBonusTurns','regenTurns','regenActive','poisonTurns','defenseDrainTurns','stunnedTurns','sealedTurns','immuneNext','dodgeDuel','pauseUses','skills','inventory','nextRoute','controlType'];
+  function getOnlineMembers(){
+    if(!onlineGameChannel)return [];
+    const state=onlineGameChannel.presenceState(); const found=new Map();
+    Object.values(state).flat().forEach(m=>{if(m&&m.clientId&&m.characterId)found.set(m.clientId,m);});
+    return [...found.values()];
+  }
+  function ensureOnlineRoster(){
+    if(!onlineGameChannel||!onlineGameRoomId||gameStarted)return;
+    const members=getOnlineMembers(); if(!members.length)return;
+    onlineGameRoster=members;
+    const mine=members.find(m=>m.clientId===lobbyClientId);
+    if(mine)selectedCharacter=mine.characterId;
+    const ordered=[...(mine?[mine]:[]),...members.filter(m=>m.clientId!==lobbyClientId).sort((a,b)=>String(a.clientId).localeCompare(String(b.clientId)))];
+    const old=new Map(players.filter(p=>p.onlineClientId).map(p=>[p.onlineClientId,p]));
+    const count=Math.max(1,Math.min(4,ordered.length));
+    createPlayers(count);
+    players=ordered.slice(0,4).map((m,i)=>{
+      const p=old.get(m.clientId)||players[i];
+      if(!p)return null;
+      p.character=m.characterId; p.onlineClientId=m.clientId; p.label=m.playerName||`玩家 ${i+1}`;
+      p.controlType=m.clientId===lobbyClientId?'local':'remote';
+      const c=characters[p.character];
+      if(!old.has(m.clientId)){p.hp=c.hp;p.maxHP=c.hp;p.baseHP=c.hp;p.attack=c.attack;p.defense=c.defense;p.skills=[{name:c.baseSkill,base:true,image:c.baseImage,desc:'角色基本技能；效果依照角色基本攻擊規則。'}];}
+      return p;
+    }).filter(Boolean);
+    currentPlayer=0; renderPlayers();
+    readyStatus.textContent=`線上玩家 ${players.length}/4｜已同步角色`;
+    rollResult.textContent='線上測試：玩家已連到同一張棋盤；請等待房主開戰。';
+  }
+  function serialiseOnlineState(){
+    return { roomId:onlineGameRoomId, sender:lobbyClientId, players:players.map(p=>{const out={clientId:p.onlineClientId,character:p.character};ONLINE_PLAYER_FIELDS.forEach(k=>{if(k==='controlType')return;if(p[k]!==undefined)out[k]=p[k];});return out;}), currentPlayerId:players[currentPlayer]?.onlineClientId||null, round, night, gameStarted, gameOver, rollText:rollResult?.textContent||'' };
+  }
+  async function publishOnlineState(){
+    if(!onlineGameChannel||!onlineGameRoomId||applyingOnlineState)return;
+    try{await onlineGameChannel.send({type:'broadcast',event:'game-state',payload:serialiseOnlineState()});}catch(e){console.warn('線上狀態同步失敗',e);}
+  }
+  function applyOnlineState(payload){
+    if(!payload||payload.roomId!==onlineGameRoomId||payload.sender===lobbyClientId||!Array.isArray(payload.players))return;
+    applyingOnlineState=true;
+    try{
+      const incoming=new Map(payload.players.filter(p=>p.clientId).map(p=>[p.clientId,p]));
+      // Do not change this browser's player order: existing game UI treats players[0] as the local player.
+      players.forEach(p=>{const q=incoming.get(p.onlineClientId);if(!q)return;Object.keys(q).forEach(k=>{if(k==='clientId'||k==='character')return;if(ONLINE_PLAYER_FIELDS.includes(k))p[k]=q[k];});p.character=q.character;});
+      const active=players.findIndex(p=>p.onlineClientId===payload.currentPlayerId);if(active>=0)currentPlayer=active;
+      round=Number(payload.round)||1;night=!!payload.night;gameStarted=!!payload.gameStarted;gameOver=!!payload.gameOver;
+      window.setMapTime(night?'night':'day');
+      if(payload.rollText&&rollResult)rollResult.textContent=payload.rollText;
+      if(gameStarted){battleStartButton.classList.add('is-hidden');readyStatus.textContent='戰鬥進行中｜已同步線上狀態';}
+      renderPlayers();updateTurnUI();
+      if(gameStarted&&players[currentPlayer]?.controlType==='local')startTurnCountdown();else clearCountdown();
+    } finally {applyingOnlineState=false;}
+  }
+  async function connectOnlineGame(){
+    if(!supabaseClient||!lobbyRooms[activeRoomIndex]?.roomId){roomCardMessage('找不到線上房間資訊，請回大廳重新進入房間。');return false;}
+    if(onlineGameChannel){try{await supabaseClient.removeChannel(onlineGameChannel);}catch(_){}onlineGameChannel=null;}
+    onlineGameRoomId=lobbyRooms[activeRoomIndex].roomId;
+    onlinePlayerName=lobbyIsHost?lobbyRooms[activeRoomIndex].host:(onlinePlayerName||'冒險者');
+    onlineGameChannel=supabaseClient.channel(`fantasy-game-${onlineGameRoomId}`,{config:{presence:{key:lobbyClientId},broadcast:{self:false}}});
+    onlineGameChannel.on('presence',{event:'sync'},()=>ensureOnlineRoster());
+    onlineGameChannel.on('broadcast',{event:'game-state'},({payload})=>applyOnlineState(payload));
+    onlineGameChannel.on('broadcast',{event:'game-start'},({payload})=>{if(payload?.roomId===onlineGameRoomId){gameStarted=true;battleStartButton.classList.add('is-hidden');readyStatus.textContent='戰鬥開始！';applyOnlineState(payload.state);}});
+    await new Promise((resolve,reject)=>{let settled=false;onlineGameChannel.subscribe(async status=>{if(status==='SUBSCRIBED'&&!settled){settled=true;try{await onlineGameChannel.track({clientId:lobbyClientId,playerName:onlinePlayerName,characterId:selectedCharacter,isHost:lobbyIsHost,joinedAt:Date.now()});resolve();}catch(e){reject(e);}}else if(status==='CHANNEL_ERROR'&&!settled){settled=true;reject(new Error('Supabase 即時頻道連線失敗'));}});});
+    ensureOnlineRoster();return true;
+  }
   function makeRoomSlots(room){const slots=['host'];for(let i=0;i<room.npcCount&&slots.length<4;i++)slots.push('npc');while(slots.length<4)slots.push(null);room.slots=slots;}
   lobbyRooms.forEach(makeRoomSlots);
   function roomCardMessage(message){$('lobbyInfoTitle').textContent='房間提示';$('lobbyInfoText').textContent=message;lobbyInfoModal.classList.remove('is-hidden');}
@@ -498,7 +571,7 @@
     }else if(lobbyModalMode==='settings'){
       throw new Error('線上房間的房主設定修改尚未開放；請先使用建立房間時的設定。');
     }else{
-      const name=prompt('請輸入你的玩家名稱','冒險者');if(!name||!name.trim())throw new Error('請輸入玩家名稱。');
+      const name=prompt('請輸入你的玩家名稱','冒險者');if(!name||!name.trim())throw new Error('請輸入玩家名稱。');onlinePlayerName=name.trim();
       const {data,error}=await supabaseClient.rpc('fantasy_join_room',{p_room_no:lobbyModalRoom,p_password:lobbyPassword.value,p_player_name:name.trim(),p_client_id:lobbyClientId});if(error)throw error;
       Object.assign(room,{active:true,host:data.host_name,npcCount:Number(data.npc_count)||0,status:data.status||'等待中',roomId:data.room_id});activeRoomIndex=lobbyModalRoom;lobbyIsHost=false;lobbyNpcCount=room.npcCount;closeLobbyForm();await refreshOnlineRooms();playTone('confirm');show(characterScreen);
     }
@@ -507,8 +580,8 @@
   startButton.addEventListener('click',()=>{playTone('click');startGameMusic();show(lobbyScreen);renderLobby();startLobbyRefresh();refreshOnlineRooms(true);});
   characterButtons.forEach(b=>b.addEventListener('click',()=>{selectedCharacter=b.dataset.character;const c=characters[selectedCharacter];if(characterArtwork){const nextSrc=new URL(c.selectionVideo,document.baseURI).href;if(characterArtwork.src!==nextSrc){characterArtwork.pause();characterArtwork.src=c.selectionVideo;characterArtwork.load();}characterArtwork.setAttribute('aria-label',c.alt);const playPromise=characterArtwork.play();if(playPromise&&typeof playPromise.catch==='function')playPromise.catch(()=>{});}if(characterFxLayer)characterFxLayer.className=`character-fx-layer fx-${selectedCharacter}`;characterButtons.forEach(button=>button.setAttribute('aria-pressed',String(button===b)));renderCharacterStats();playTone('click');}));
   renderCharacterStats();
-  confirmButton.addEventListener('click',()=>{playTone('confirm');try{sessionStorage.setItem('fantasySelectedCharacter',selectedCharacter);}catch(_){}show(mapScreen);const roomCount=Math.max(2,Math.min(4,1+(Number(lobbyNpcCount)||0)));playerCount.value=String(roomCount);createPlayers(roomCount);if(Number(lobbyNpcCount)===0)rollResult.textContent='本機預覽模式至少保留 1 位 NPC；正式多人連線後，空位可由真人玩家加入。';});
-  battleStartButton.addEventListener('click',()=>{if(gameStarted||gameOver)return;gameStarted=true;startGameMusic();battleStartButton.classList.add('is-hidden');readyStatus.textContent='戰鬥開始！';playTone('confirm');rollResult.textContent='10 秒內未擲骰將自動擲出';updateTurnUI();startTurnCountdown();if(players[currentPlayer]?.controlType==='npc')window.setTimeout(()=>runRoll(players[currentPlayer]),500);});
+  confirmButton.addEventListener('click',async()=>{playTone('confirm');try{sessionStorage.setItem('fantasySelectedCharacter',selectedCharacter);}catch(_){}show(mapScreen);const roomCount=Math.max(1,Math.min(4,1+(Number(lobbyNpcCount)||0)));playerCount.value=String(roomCount);createPlayers(roomCount);if(activeRoomIndex>=0&&lobbyRooms[activeRoomIndex]?.roomId){try{const ok=await connectOnlineGame();if(ok){await publishOnlineState();rollResult.textContent='已連線至同一房間。請等所有真人玩家選好角色，再由房主按「開戰」。';}}catch(err){console.error(err);rollResult.textContent=`線上同步連線失敗：${err.message||'請重新整理後重試'}`;}}});
+  battleStartButton.addEventListener('click',async()=>{if(gameStarted||gameOver)return;if(onlineGameChannel&&getOnlineMembers().length<2){rollResult.textContent='目前只有 1 位真人連線。請讓另一台電腦也進入房間、選好角色並進入地圖，再按「開戰」。';return;}gameStarted=true;startGameMusic();battleStartButton.classList.add('is-hidden');readyStatus.textContent='戰鬥開始！';playTone('confirm');rollResult.textContent='10 秒內未擲骰將自動擲出';updateTurnUI();await publishOnlineState();if(onlineGameChannel){try{await onlineGameChannel.send({type:'broadcast',event:'game-start',payload:{roomId:onlineGameRoomId,state:serialiseOnlineState()}});}catch(_){}}if(players[currentPlayer]?.controlType==='local')startTurnCountdown();if(players[currentPlayer]?.controlType==='npc')window.setTimeout(()=>runRoll(players[currentPlayer]),500);});
   $('gameOverReturnButton').addEventListener('click',()=>{gameOverModal.classList.add('is-hidden');show(startScreen);});
   playerCount.addEventListener('change',()=>{if(!gameStarted&&!busy&&!pendingTurnAction&&!pauseActive)createPlayers(Number(playerCount.value)||2);});rollButton.addEventListener('click',rollDice);dieStage.addEventListener('click',rollDice);dieStage.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();rollDice();}});pauseButton.addEventListener('click',pauseGame);
   window.setMapTime=function(time){night=time==='night';const boardSrc=night?'assets/map-night.png':'assets/map-day.jpg';if(boardImage.getAttribute('src')!==boardSrc)boardImage.setAttribute('src',boardSrc);mapBackdrop.style.backgroundImage='none';mapBackdrop.dataset.time=night?'night':'day';if(phaseLabel)phaseLabel.textContent=night?'☾ 夜晚':'☀ 白天';renderSelfStatus();};
