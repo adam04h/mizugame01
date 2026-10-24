@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#020711">
   <title>奇幻城堡冒險</title>
-  <link rel="stylesheet" href="style.css?v=31">
+  <link rel="stylesheet" href="style.css?v=33">
 </head>
 <body>
   <audio id="gameMusic" src="assets/gameplay-theme-original.wav" preload="auto" loop></audio>
@@ -17,6 +17,9 @@
         <button id="startButton" class="hotspot start-hotspot" aria-label="開始遊戲"></button>
       </div>
     </section>
+    <div id="entryGateModal" class="lobby-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="entryGateTitle">
+      <div class="lobby-modal-card"><button id="entryGateClose" class="lobby-modal-close" type="button" aria-label="關閉">×</button><h2 id="entryGateTitle">遊戲入口驗證</h2><p>請輸入由遊戲設計者提供的入口密碼，通過後才能查看房間大廳。</p><form id="entryGateForm"><label>遊戲入口密碼<input id="entryGatePassword" type="password" autocomplete="current-password" required maxlength="128" placeholder="輸入入口密碼"></label><p id="entryGateError" class="lobby-form-error" aria-live="polite"></p><div class="lobby-modal-actions"><button class="lobby-secondary" id="entryGateCancel" type="button">取消</button><button class="lobby-primary" type="submit">驗證並進入</button></div></form></div>
+    </div>
     <section id="lobbyScreen" class="screen lobby-screen is-hidden" aria-label="多人遊戲大廳">
       
       <button id="lobbyBackButton" class="lobby-nav lobby-back" type="button">⌂ 返回開始頁</button>
@@ -30,7 +33,7 @@
       
       
       <div id="lobbyModal" class="lobby-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="lobbyModalTitle">
-        <div class="lobby-modal-card"><button id="lobbyModalClose" class="lobby-modal-close" type="button" aria-label="關閉">×</button><h2 id="lobbyModalTitle">建立房間</h2><p id="lobbyModalHint">設定房間資訊</p><form id="lobbyForm"><label id="lobbyNameLabel">房主名稱<input id="lobbyHostName" maxlength="12" value="冒險者" autocomplete="nickname"></label><label id="lobbyPasswordLabel">房間密碼<input id="lobbyPassword" type="password" minlength="1" maxlength="12" placeholder="設定房間密碼" autocomplete="new-password"></label><label id="lobbyNpcLabel">NPC 數量<select id="lobbyNpcCount"><option value="0">0 位 NPC（其他位置等待真人）</option><option value="1">1 位 NPC</option><option value="2">2 位 NPC</option><option value="3" selected>3 位 NPC（單人冒險）</option></select></label><p id="lobbyFormError" class="lobby-form-error" aria-live="polite"></p><div class="lobby-modal-actions"><button id="lobbyCancel" type="button" class="lobby-secondary">取消</button><button id="lobbySubmit" type="submit" class="lobby-primary">確認</button></div></form></div>
+        <div class="lobby-modal-card"><button id="lobbyModalClose" class="lobby-modal-close" type="button" aria-label="關閉">×</button><h2 id="lobbyModalTitle">建立房間</h2><p id="lobbyModalHint">設定房間資訊</p><form id="lobbyForm"><label id="lobbyNameLabel">房主名稱<input id="lobbyHostName" maxlength="12" value="冒險者" autocomplete="nickname"></label><label id="lobbyPasswordLabel">房間密碼<input id="lobbyPassword" type="password" minlength="1" maxlength="12" placeholder="設定房間密碼" autocomplete="new-password"></label><label id="lobbyNpcLabel" class="is-hidden">NPC 數量<select id="lobbyNpcCount"><option value="0" selected>0 位 NPC</option><option value="1">1 位 NPC</option><option value="2">2 位 NPC</option><option value="3">3 位 NPC</option></select></label><p id="lobbyFormError" class="lobby-form-error" aria-live="polite"></p><div class="lobby-modal-actions"><button id="lobbyCancel" type="button" class="lobby-secondary">取消</button><button id="lobbySubmit" type="submit" class="lobby-primary">確認</button></div></form></div>
       </div>
       <div id="lobbyInfoModal" class="lobby-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="lobbyInfoTitle"><div class="lobby-modal-card"><button id="lobbyInfoClose" class="lobby-modal-close" type="button" aria-label="關閉">×</button><h2 id="lobbyInfoTitle">房間說明</h2><p id="lobbyInfoText">棋盤戰鬥遊戲，每位玩家共有三條生命，若有一方三條生命都用盡，就會結束遊戲。</p><div class="lobby-modal-actions"><button id="lobbyInfoOk" type="button" class="lobby-primary">知道了</button></div></div></div>
     </section>
@@ -169,6 +172,6 @@
       </div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>window.FANTASY_SUPABASE_URL="https://lojdabpuzqlbfjymztfq.supabase.co";window.FANTASY_SUPABASE_KEY="sb_publishable_kBWpcIeA2vER83zX8MmPIQ_kt8yddju";</script>
-  <script src="app.js?v=32"></script>
+  <script src="app.js?v=37"></script>
 </body>
 </html>
