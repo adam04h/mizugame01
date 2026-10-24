@@ -109,7 +109,7 @@
   function endGameIfNeeded(){if(gameOver||!players.some(p=>Number(p.lives??3)<=0))return false;gameOver=true;gameStarted=false;busy=false;pendingTurnAction=false;pauseActive=false;clearCountdown();if(pauseTimer)clearTimeout(pauseTimer);if(pauseInterval)clearInterval(pauseInterval);pauseOverlay.classList.add('is-hidden');const ranked=[...players].sort((a,b)=>(Number(b.lives??3)-Number(a.lives??3))||(Number(b.coins||0)-Number(a.coins||0)));gameOverRankings.innerHTML='';ranked.slice(0,3).forEach((p,index)=>{const li=document.createElement('li');li.className=`rank-${index+1}`;const medal=document.createElement('span');medal.className='rank-medal';medal.textContent=['🥇','🥈','🥉'][index];const info=document.createElement('div');info.className='rank-info';const name=document.createElement('strong');name.textContent=`${p===players[0]?'自身玩家／1P':`玩家 ${players.indexOf(p)+1}`}｜${characters[p.character].name}（${characters[p.character].alias}）`;const stats=document.createElement('small');stats.textContent=`生命 ${Math.max(0,Number(p.lives??3))}/3　・　金幣 ${Number(p.coins||0).toLocaleString('zh-TW')}`;info.append(name,stats);li.append(medal,info);gameOverRankings.appendChild(li);});gameOverReason.textContent='有玩家的三條生命已用盡，遊戲結束。排名先比較剩餘生命；生命相同時，再比較金幣數量。';gameOverModal.classList.remove('is-hidden');rollResult.textContent='遊戲結束，請查看前三名統計。';stopGameMusic();stopBattleMusic();updateTurnUI();return true;}
     function renderPlayers(){playerTokens.innerHTML='';players.forEach((p,i)=>{const token=document.createElement('img');token.className='player-token'+(i===currentPlayer?' is-active':'');token.src=characters[p.character].gif;token.alt=`玩家 ${i+1}：${characters[p.character].name}`;token.draggable=false;p.token=token;playerTokens.appendChild(token);});positionAllTokens();renderSelfStatus();updateTurnUI();}
   function createPlayers(count){clearCountdown();availableSkills=[...skills];pendingSkills=[];pendingSkillReplacements=[];const opponents=characterOrder.filter(id=>id!==selectedCharacter);players=[selectedCharacter,...opponents].slice(0,count).map((character,index)=>{const c=characters[character];return{character,position:0,token:null,label:`玩家 ${index+1}`,controlType:index===0?'local':'npc',lives:3,nextRoute:null,middleDirection:0,forcedOuterJunction:false,hp:c.hp,maxHP:c.hp,baseHP:c.hp,attack:c.attack,defense:c.defense,coins:0,inventory:{potion:0,wind:0,invisibility:0},invisibilityTurns:0,skills:[{name:c.baseSkill,base:true,image:c.baseImage,desc:'角色基本技能；效果依照角色基本攻擊規則。'}],lapRewards:0,hasClaimedLap:false,lapsCompleted:0,pauseUses:0,attackBonus:0,attackBonusTurns:0,regenTurns:0,regenActive:false,poisonTurns:0,defenseDrainTurns:0,stunnedTurns:0,sealedTurns:0,immuneNext:false,dodgeDuel:0};});currentPlayer=0;round=1;night=false;busy=false;pendingTurnAction=false;pauseActive=false;completingPendingAction=false;gameStarted=false;gameOver=false;gameOverModal.classList.add('is-hidden');window.setMapTime('day');renderPlayers();rollResult.textContent='請所有玩家準備完成，再按「開戰」';cube.style.transform='rotateX(-22deg) rotateY(-28deg)';battleStartButton.classList.remove('is-hidden');readyStatus.textContent=`${count} 位玩家已準備`;updateTurnUI();}
-  function updateBoardActions(){const p=players[currentPlayer];const localTurn=!!p&&p.controlType==='local';const skillReady=!!p&&isSkillTile(p.position)&&availableSkills.length>0;const coinReady=!!p&&(coinTiles.has(p.position)||p.lapRewards>0||(isSkillTile(p.position)&&availableSkills.length===0));skillActionButton.disabled=!localTurn||busy||!skillReady||!pendingTurnAction;coinActionButton.disabled=!localTurn||busy||!coinReady||!pendingTurnAction;skillActionButton.title=availableSkills.length?`抽取招式（剩餘 ${availableSkills.length} 種）`:'招式已抽完，改抽金幣';}
+  function updateBoardActions(){const p=players[currentPlayer];const localTurn=!!p&&p.controlType==='local';const skillReady=!!p&&isSkillTile(p.position)&&availableSkills.length>0;const coinReady=!!p&&(coinTiles.has(p.position)||p.lapRewards>0||(isSkillTile(p.position)&&availableSkills.length===0));skillActionButton.disabled=!localTurn||busy||!skillReady||!pendingTurnAction;coinActionButton.disabled=!localTurn||busy||!coinReady||!pendingTurnAction;skillActionButton.classList.toggle('pool-ready',!skillActionButton.disabled);coinActionButton.classList.toggle('pool-ready',!coinActionButton.disabled);skillActionButton.title=availableSkills.length?`招式池：點選黃色發光圓圈抽取招式（剩餘 ${availableSkills.length} 種）`:'招式已抽完，改抽金幣';coinActionButton.title='金幣池：點選黃色發光圓圈領取金幣';}
   function updateTurnUI(){roundLabel.textContent=`第 ${round} 回合`;phaseLabel.textContent=night?'☾ 夜晚':'☀ 白天';const p=players[currentPlayer];turnLabel.textContent=p?`${p.label||`玩家 ${currentPlayer+1}`}｜${characters[p.character].name}${p.controlType==='npc'?'（NPC）':''}`:'等待玩家';positionAllTokens();renderSelfStatus();updateBoardActions();const disabled=!gameStarted||busy||pendingTurnAction||!p||p.controlType!=='local'||pauseActive||!!duelState;rollButton.disabled=disabled;dieStage.setAttribute('aria-disabled',String(disabled));playerCount.disabled=gameStarted||busy||pendingTurnAction||pauseActive||!!duelState;pauseButton.disabled=!p||p.controlType!=='local'||pauseActive||p.pauseUses>=3||busy||!!duelState||pendingTurnAction||!gameStarted;pauseButton.textContent=pauseActive?'暫停中…':`暫停（剩餘 ${p?3-p.pauseUses:3} 次）`;}
   function isJunction(pos){return pos===8||pos===23;}
   function routeLabel(pos){return pos===8?'右下角「選擇方向」':'左上角「選擇方向」';}
@@ -416,9 +416,14 @@
     finishingTurn=false;
     updateTurnUI();
     publishOnlineState();
-    if(gameStarted){if(players[currentPlayer]?.controlType==='local')startTurnCountdown();if(players[currentPlayer]?.controlType==='npc'){
-      clearCountdown();if(isNpcAuthority())window.setTimeout(()=>{if(!busy&&!pendingTurnAction&&!pauseActive&&!duelState&&players[currentPlayer]?.controlType==='npc')runRoll(players[currentPlayer]);},700);else autoRollCountdown.textContent='等待房主控制 NPC…';
-    }}
+    if(gameStarted){
+      if(players[currentPlayer]?.controlType==='local')startTurnCountdown();
+      if(players[currentPlayer]?.controlType==='npc'){
+        clearCountdown();
+        if(onlineGameChannel){if(lobbyIsHost)scheduleNpcTurnIfAuthority();else autoRollCountdown.textContent='等待房主自動操作 NPC…';}
+        else if(isNpcAuthority())window.setTimeout(()=>{if(!busy&&!pendingTurnAction&&!pauseActive&&!duelState&&players[currentPlayer]?.controlType==='npc')runRoll(players[currentPlayer]);},700);
+      }
+    }
   }
   function applyEndOfTurnEffects(p){if(!p)return;if(p.invisibilityTurns>0){p.invisibilityTurns--;positionAllTokens();}if(p.attackBonusTurns>0){p.attackBonusTurns--;if(p.attackBonusTurns===0)p.attackBonus=0;}if(p.regenActive&&p.hp<p.maxHP)p.hp=Math.min(p.maxHP,p.hp+1);if(p.hp>=p.maxHP)p.regenActive=false;if(p.poisonTurns>0){p.hp=Math.max(0,p.hp-2);p.poisonTurns--;}if(p.defenseDrainTurns>0){p.defense=Math.max(0,p.defense-2);p.defenseDrainTurns--; }renderSelfStatus();}
   function clearCountdown(){if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;}}
@@ -491,12 +496,16 @@
   const supabaseClient = (window.supabase && window.FANTASY_SUPABASE_URL && window.FANTASY_SUPABASE_KEY)
     ? window.supabase.createClient(window.FANTASY_SUPABASE_URL, window.FANTASY_SUPABASE_KEY) : null;
   function getEntrySessionToken(){
-    try{
-      const token=sessionStorage.getItem('fantasyEntryToken')||'';
-      const expires=Number(sessionStorage.getItem('fantasyEntryExpires')||0);
-      if(token&&expires>Date.now()+5000)return token;
-      sessionStorage.removeItem('fantasyEntryToken');sessionStorage.removeItem('fantasyEntryExpires');
-    }catch(_){}
+    let token='', expires=0;
+    try{token=localStorage.getItem('fantasyEntryToken')||'';expires=Number(localStorage.getItem('fantasyEntryExpires')||0);}catch(_){}
+    if(!token){try{token=sessionStorage.getItem('fantasyEntryToken')||'';expires=Number(sessionStorage.getItem('fantasyEntryExpires')||0);}catch(_){}}
+    if(token&&expires>Date.now()+5000){
+      // Keep the short-lived signed token across a closed/reopened tab. Never store the entry password.
+      try{localStorage.setItem('fantasyEntryToken',token);localStorage.setItem('fantasyEntryExpires',String(expires));}catch(_){}
+      return token;
+    }
+    try{localStorage.removeItem('fantasyEntryToken');localStorage.removeItem('fantasyEntryExpires');}catch(_){}
+    try{sessionStorage.removeItem('fantasyEntryToken');sessionStorage.removeItem('fantasyEntryExpires');}catch(_){}
     return '';
   }
   async function rpcWithSession(name,args={}){
@@ -547,6 +556,7 @@
   }
   async function leaveActiveRoom(){
     if(activeRoomIndex>=0&&getEntrySessionToken()&&supabaseClient){try{await rpcWithSession('fantasy_leave_room',{p_room_no:activeRoomIndex,p_client_id:lobbyClientId});}catch(e){console.warn('離開房間清理失敗',e);}}
+    try{localStorage.removeItem(ACTIVE_ROOM_STORAGE_KEY);}catch(_){}
     if(onlineGameChannel){try{await supabaseClient.removeChannel(onlineGameChannel);}catch(_){}onlineGameChannel=null;}
     onlineGameRoomId=null;activeRoomIndex=-1;lobbyIsHost=false;lobbyNpcCount=0;onlineGameRoster=[];onlineCoinEventsQueue=[];
     if(memberHeartbeatTimer){clearInterval(memberHeartbeatTimer);memberHeartbeatTimer=null;}
@@ -580,6 +590,8 @@
   // Live online game: Supabase Presence identifies each selected character; Broadcast keeps the board snapshot in sync.
   let onlineGameChannel=null, onlineGameRoomId=null, onlineGameRoster=[], applyingOnlineState=false, onlinePlayerName='冒險者';
   let onlineCoinEventsQueue=[], onlineCoinEventSeq=0, outgoingOnlineStateRevision=0, lastRemoteDuelResultId=null;
+  let npcAutoTimer=null,npcAutoLastKey='',npcAutoAttempts=0;
+  const ACTIVE_ROOM_STORAGE_KEY='fantasyActiveRoomNo';
   const seenOnlineStateMessageIds=new Set();
   const seenOnlineCoinEvents=new Set();
   const queuedOnlineCoinNotices=[];
@@ -597,6 +609,29 @@
     return sortOnlineMembers([...found.values()]);
   }
   function isNpcAuthority(){return !onlineGameChannel||lobbyIsHost;}
+  // Only the host simulates NPC turns in an online room. This scheduler also runs when
+  // a remote human finishes their turn, because that device cannot execute the NPC AI.
+  function scheduleNpcTurnIfAuthority(){
+    const active=players[currentPlayer];
+    const eligible=!!onlineGameChannel&&!!lobbyIsHost&&gameStarted&&!!active&&active.controlType==='npc'&&!busy&&!pendingTurnAction&&!pauseActive&&!duelState&&!gameOver;
+    if(!eligible){if(npcAutoTimer){clearTimeout(npcAutoTimer);npcAutoTimer=null;}return;}
+    const key=`${onlineGameRoomId}|${active.onlineClientId||currentPlayer}|${round}|${active.position}|${active.hp}|${active.stunnedTurns||0}`;
+    if(key!==npcAutoLastKey){npcAutoLastKey=key;npcAutoAttempts=0;}
+    if(npcAutoTimer||npcAutoAttempts>=3)return;
+    npcAutoAttempts++;
+    const waitMs=npcAutoAttempts===1?850:1600;
+    npcAutoTimer=setTimeout(async()=>{
+      npcAutoTimer=null;
+      const now=players[currentPlayer];
+      if(!onlineGameChannel||!lobbyIsHost||!gameStarted||!now||now.controlType!=='npc'||busy||pendingTurnAction||pauseActive||duelState||gameOver){return;}
+      try{await runRoll(now);}catch(error){console.error('NPC 自動回合失敗：',error);}
+      // If the same NPC remains current because of a transient failure, retry at most twice.
+      const after=players[currentPlayer];
+      if(after&&after.controlType==='npc'&&after.onlineClientId===now.onlineClientId&&gameStarted&&!busy&&!pendingTurnAction&&!pauseActive&&!duelState&&!gameOver){
+        setTimeout(()=>scheduleNpcTurnIfAuthority(),350);
+      }else{npcAutoLastKey='';npcAutoAttempts=0;scheduleNpcTurnIfAuthority();}
+    },waitMs);
+  }
   function ensureOnlineRoster(){
     if(!onlineGameChannel||!onlineGameRoomId||gameStarted)return;
     // Use the database member list for canonical membership so a player waiting on the character page
@@ -698,6 +733,7 @@
     return {roomId:onlineGameRoomId,sender:lobbyClientId,stateMessageId:`${lobbyClientId}-${Date.now()}-${++outgoingOnlineStateRevision}`,cubeTransform:cube?.style?.transform||'',pendingTurnAction,
       players:players.map(p=>{const out={clientId:p.onlineClientId,character:p.character,label:p.label,isNpc:p.controlType==='npc'};ONLINE_PLAYER_FIELDS.forEach(k=>{if(k==='controlType')return;if(p[k]!==undefined)out[k]=p[k];});return out;}),
       currentPlayerId:players[currentPlayer]?.onlineClientId||null,round,night,gameStarted,gameOver,
+      availableSkillNames:availableSkills.map(skill=>skill.name),
       rollText:rollResult?.textContent||'',duel:serialiseOnlineDuel(),duelResult:onlineDuelResult,
       coinEvents:[...onlineCoinEventsQueue]};
   }
@@ -816,6 +852,12 @@
       players.forEach(p=>{const q=incoming.get(p.onlineClientId);if(!q)return;Object.keys(q).forEach(k=>{if(k==='clientId'||k==='character'||k==='label'||k==='isNpc')return;if(ONLINE_PLAYER_FIELDS.includes(k))p[k]=q[k];});p.character=q.character;p.label=q.label||p.label;p.controlType=(q.isNpc||String(q.clientId).startsWith('npc:'))?'npc':(q.clientId===lobbyClientId?'local':'remote');});
       const active=players.findIndex(p=>p.onlineClientId===payload.currentPlayerId);if(active>=0)currentPlayer=active;
       round=Number(payload.round)||1;night=!!payload.night;gameStarted=!!payload.gameStarted;gameOver=!!payload.gameOver;pendingTurnAction=!!payload.pendingTurnAction;if(payload.cubeTransform&&cube)cube.style.transform=payload.cubeTransform;
+      if(Array.isArray(payload.availableSkillNames))availableSkills=payload.availableSkillNames.map(name=>skills.find(skill=>skill.name===name)).filter(Boolean);
+      else {
+        // Backward compatibility for snapshots saved by V8.3.1 before the remaining pool was serialized.
+        const learned=new Set(players.flatMap(player=>(player.skills||[]).map(skill=>skill.name)));
+        availableSkills=skills.filter(skill=>!learned.has(skill.name));
+      }
       window.setMapTime(night?'night':'day');if(payload.rollText&&rollResult)rollResult.textContent=payload.rollText;
       onlineDuelResult=payload.duelResult||onlineDuelResult;
       applyOnlineDuelSnapshot(payload.duel||null,payload.duelResult||null);
@@ -825,6 +867,9 @@
       if(gameStarted&&players[currentPlayer]?.controlType==='local'&&!duelState)startTurnCountdown();else clearCountdown();
     }finally{applyingOnlineState=false;}
     if(payload.duel&&lobbyIsHost){const d=payload.duel;const l=players.find(p=>p.onlineClientId===d.leftId),r=players.find(p=>p.onlineClientId===d.rightId);if((l&&l.hp<=0)||(r&&r.hp<=0)){setTimeout(()=>{if(duelState&&!duelFinishing)finishDuel();},0);}}
+    // Critical for mixed human/NPC rooms: remote clients publish the turn change,
+    // and the host is responsible for starting the next NPC's automated turn.
+    scheduleNpcTurnIfAuthority();
   }
   async function connectOnlineGame(){
     if(!supabaseClient||!lobbyRooms[activeRoomIndex]?.roomId){roomCardMessage('找不到線上房間資訊，請回大廳重新進入房間。');return false;}
@@ -842,6 +887,7 @@
     });});
     ensureOnlineRoster();
     try{const saved=await rpcWithSession('fantasy_load_game_state',{p_room_no:activeRoomIndex,p_client_id:lobbyClientId});if(saved?.game_state?.gameStarted)applyOnlineState(saved.game_state,true);}catch(e){console.warn('載入既有遊戲狀態失敗',e);}
+    if(gameStarted)scheduleNpcTurnIfAuthority();
     return true;
   }
   function roomCardMessage(message){$('lobbyInfoTitle').textContent='房間提示';$('lobbyInfoText').textContent=message;lobbyInfoModal.classList.remove('is-hidden');}
@@ -924,12 +970,12 @@
         const npcCount=Math.max(0,Math.min(3,Number(lobbyNpcCountInput.value)||0));
         const data=await rpcWithSession('fantasy_create_room',{p_room_no:lobbyModalRoom,p_host_name:host,p_password:pass,p_npc_count:npcCount,p_client_id:lobbyClientId});
         Object.assign(room,{active:true,host,npcCount,status:'等待中',roomId:data?.room_id,members:[],slots:Array(4).fill(null),gameStarted:false});
-        activeRoomIndex=lobbyModalRoom;lobbyIsHost=true;lobbyNpcCount=npcCount;onlinePlayerName=host;closeLobbyForm();startMemberHeartbeat();await refreshOnlineRooms();
+        activeRoomIndex=lobbyModalRoom;lobbyIsHost=true;lobbyNpcCount=npcCount;onlinePlayerName=host;try{localStorage.setItem(ACTIVE_ROOM_STORAGE_KEY,String(activeRoomIndex));}catch(_){}closeLobbyForm();startMemberHeartbeat();await refreshOnlineRooms();
       }else if(lobbyModalMode==='join'){
         const name=lobbyHostName.value.trim();if(!name)throw new Error('請輸入玩家名稱。');
         const data=await rpcWithSession('fantasy_join_room',{p_room_no:lobbyModalRoom,p_password:lobbyPassword.value,p_player_name:name,p_client_id:lobbyClientId});
         Object.assign(room,{active:true,host:data.host_name,npcCount:0,status:data.status||'等待中',roomId:data.room_id,gameStarted:!!data.game_started});
-        activeRoomIndex=lobbyModalRoom;lobbyIsHost=false;lobbyNpcCount=0;onlinePlayerName=name;closeLobbyForm();startMemberHeartbeat();await refreshOnlineRooms();playTone('confirm');show(characterScreen);await refreshCharacterAvailability();
+        activeRoomIndex=lobbyModalRoom;lobbyIsHost=false;lobbyNpcCount=0;onlinePlayerName=name;try{localStorage.setItem(ACTIVE_ROOM_STORAGE_KEY,String(activeRoomIndex));}catch(_){}closeLobbyForm();startMemberHeartbeat();await refreshOnlineRooms();playTone('confirm');show(characterScreen);await refreshCharacterAvailability();
       }
     }catch(err){lobbyFormError.textContent=err?.message||'連線失敗，請稍後再試。';}
     finally{submit.disabled=false;}
@@ -941,16 +987,76 @@
   lobbyInfoModal.addEventListener('click',e=>{if(e.target===lobbyInfoModal)lobbyInfoModal.classList.add('is-hidden');});lobbyModal.addEventListener('click',e=>{if(e.target===lobbyModal)closeLobbyForm();});
   function openEntryGate(){entryGateError.textContent='';entryGatePassword.value='';entryGateModal.classList.remove('is-hidden');entryGatePassword.focus();}
   function closeEntryGate(){entryGateModal.classList.add('is-hidden');entryGateError.textContent='';}
-  function enterLobbyAfterLogin(){closeEntryGate();playTone('click');startGameMusic();show(lobbyScreen);renderLobby();startLobbyRefresh();refreshOnlineRooms(true);}
-  startButton.addEventListener('click',()=>{playTone('click');if(getEntrySessionToken()){enterLobbyAfterLogin();return;}openEntryGate();});
+  async function resumeRoomAfterReload(){
+    let roomIndex=-1;
+    try{roomIndex=Number(localStorage.getItem(ACTIVE_ROOM_STORAGE_KEY));}catch(_){}
+    let room=Number.isInteger(roomIndex)&&roomIndex>=0&&roomIndex<=3?lobbyRooms[roomIndex]:null;
+    let member=(room?.members||[]).find(m=>m.client_id===lobbyClientId);
+    // Backward compatibility: the earlier V8.3.1 build did not store the room number.
+    // Find the player's existing membership by its persistent browser ID if no pointer exists.
+    if(!room?.active||!member){
+      roomIndex=lobbyRooms.findIndex(candidate=>candidate.active&&(candidate.members||[]).some(m=>m.client_id===lobbyClientId));
+      room=roomIndex>=0?lobbyRooms[roomIndex]:null;
+      member=(room?.members||[]).find(m=>m.client_id===lobbyClientId);
+    }
+    if(!room?.active||!member){
+      try{localStorage.removeItem(ACTIVE_ROOM_STORAGE_KEY);}catch(_){}
+      return false;
+    }
+    try{localStorage.setItem(ACTIVE_ROOM_STORAGE_KEY,String(roomIndex));}catch(_){}
+    activeRoomIndex=roomIndex;lobbyIsHost=member.role==='host';lobbyNpcCount=Number(room.npcCount)||0;onlinePlayerName=member.player_name||room.host||'冒險者';
+    selectedCharacter=member.character_id||(()=>{try{return localStorage.getItem('fantasySelectedCharacter')||'odyssey';}catch(_){return 'odyssey';}})();
+    try{await rpcWithSession('fantasy_heartbeat',{p_room_no:activeRoomIndex,p_client_id:lobbyClientId});}catch(error){
+      roomCardMessage('找到你上次的房間，但無法恢復連線：'+(error?.message||'請重新登入或確認房間仍存在。'));
+      return false;
+    }
+    startMemberHeartbeat();
+    if(room.gameStarted){
+      show(mapScreen);playerCount.value='1';createPlayers(1);battleStartButton.classList.toggle('is-hidden',!lobbyIsHost);
+      const connected=await connectOnlineGame();
+      if(!connected||!gameStarted){
+        roomCardMessage('已找到你上次的遊戲房間，但尚未取得保存的遊戲狀態。請勿建立新房間；先將此畫面截圖給我。');
+        return true;
+      }
+      rollResult.textContent='已重新連回正在進行的遊戲；玩家位置、回合與狀態已從伺服器恢復。';
+      updateTurnUI();
+      return true;
+    }
+    if(member.is_ready&&member.character_id){
+      // If the player had already chosen a character, restore the waiting map instead of
+      // forcing them through character selection again.
+      show(mapScreen);playerCount.value='1';createPlayers(1);battleStartButton.classList.toggle('is-hidden',!lobbyIsHost);
+      const connected=await connectOnlineGame();
+      if(connected&&!gameStarted){readyStatus.textContent='角色已恢復，等待房主開戰。';rollResult.textContent='已重新連回房間；所有玩家仍需等待房主開戰。';updateTurnUI();}
+      return true;
+    }
+    show(characterScreen);
+    const savedButton=characterButtons.find(button=>button.dataset.character===selectedCharacter);
+    if(savedButton)savedButton.click();
+    await refreshCharacterAvailability();
+    readyStatus.textContent='已恢復上次房間；請確認角色後繼續等待房主開戰。';
+    return true;
+  }
+  async function enterLobbyAfterLogin(){
+    closeEntryGate();playTone('click');startGameMusic();show(lobbyScreen);renderLobby();
+    await refreshOnlineRooms(true);
+    let resumed=false;
+    try{resumed=await resumeRoomAfterReload();}
+    catch(error){console.error('恢復上次遊戲失敗：',error);roomCardMessage('無法自動恢復上次遊戲：'+(error?.message||'請重新整理後再試。'));}
+    startLobbyRefresh();
+    if(!resumed&&getEntrySessionToken()&&mapScreen.classList.contains('is-hidden')&&characterScreen.classList.contains('is-hidden'))show(lobbyScreen);
+  }
+  startButton.addEventListener('click',()=>{playTone('click');if(getEntrySessionToken()){void enterLobbyAfterLogin();return;}openEntryGate();});
   entryGateForm.addEventListener('submit',async event=>{
     event.preventDefault();entryGateError.textContent='';const submit=entryGateForm.querySelector('button[type="submit"]');submit.disabled=true;
     try{
       if(!supabaseClient)throw new Error('Supabase 連線元件未載入，請重新整理頁面。');
       const {data,error}=await supabaseClient.functions.invoke('game-login',{body:{password:entryGatePassword.value}});
       if(error||!data?.token||!data?.expiresAt)throw new Error('入口密碼錯誤，或登入函式尚未完成部署。');
-      sessionStorage.setItem('fantasyEntryToken',data.token);sessionStorage.setItem('fantasyEntryExpires',String(Date.parse(data.expiresAt)));
-      enterLobbyAfterLogin();
+      const tokenExpires=String(Date.parse(data.expiresAt));
+      try{localStorage.setItem('fantasyEntryToken',data.token);localStorage.setItem('fantasyEntryExpires',tokenExpires);}catch(_){}
+      try{sessionStorage.setItem('fantasyEntryToken',data.token);sessionStorage.setItem('fantasyEntryExpires',tokenExpires);}catch(_){}
+      await enterLobbyAfterLogin();
     }catch(error){entryGateError.textContent=error?.message||'登入失敗，請稍後再試。';}
     finally{submit.disabled=false;}
   });
@@ -964,7 +1070,7 @@
     try{
       const chosen=await rpcWithSession('fantasy_choose_character',{p_room_no:activeRoomIndex,p_client_id:lobbyClientId,p_character_id:selectedCharacter});
       if(chosen?.character_id)selectedCharacter=chosen.character_id;
-      try{sessionStorage.setItem('fantasySelectedCharacter',selectedCharacter);}catch(_){}
+      try{localStorage.setItem('fantasySelectedCharacter',selectedCharacter);sessionStorage.setItem('fantasySelectedCharacter',selectedCharacter);}catch(_){try{sessionStorage.setItem('fantasySelectedCharacter',selectedCharacter);}catch(__){}}
       show(mapScreen);playerCount.value='1';createPlayers(1);battleStartButton.classList.toggle('is-hidden',!lobbyIsHost);
       const ok=await connectOnlineGame();
       if(ok){await publishOnlineState();rollResult.textContent='角色已登記。等待房主確認所有玩家後按「開戰」。';}

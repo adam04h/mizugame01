@@ -151,6 +151,13 @@ button, select { font: inherit; }
 .board-action-hotspot { position:absolute; z-index:8; padding:0; border:0; background:transparent; border-radius:50%; cursor:pointer; }
 .board-action-hotspot:disabled { cursor:default; pointer-events:none; }
 .board-action-hotspot:not(:disabled) { outline:2px solid #ffe48b; box-shadow:0 0 0 5px #ffd45b30,0 0 24px #ffca46b8; animation:actionPulse 1.4s ease-in-out infinite; }
+/* V8.3.2: make the coin and skill pool targets unmistakable when an action is available. */
+.board-action-hotspot.pool-ready { outline:none !important; overflow:visible; z-index:30; }
+.board-action-hotspot.pool-ready::before { content:""; position:absolute; inset:5%; display:block; border:6px solid #fff5a6; border-radius:50%; background:radial-gradient(circle, #ffe46b22 0 48%, #ffca3650 70%, #ffb92c10 100%); box-shadow:0 0 0 7px #ffcc3b88, 0 0 24px 9px #ffdc54, inset 0 0 16px #fff4a6; pointer-events:none; animation:poolTargetPulse .78s ease-in-out infinite; }
+.board-action-hotspot.pool-ready::after { content:"點擊領取金幣"; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); display:block; width:max-content; max-width:160%; white-space:nowrap; padding:6px 11px; border:2px solid #fff2a1; border-radius:999px; color:#fffbe2; background:linear-gradient(#855600f2,#4c2c00f5); font-size:clamp(11px,.9vw,16px); line-height:1.2; font-weight:1000; text-shadow:0 1px 2px #251400; box-shadow:0 0 18px #ffcd44, inset 0 1px 2px #fff9; pointer-events:none; }
+.board-action-hotspot.pool-ready[aria-label="抽取招式"]::after { content:"點擊抽取招式"; }
+@keyframes poolTargetPulse { 0%,100% { transform:scale(.96); filter:brightness(1); opacity:.94; } 50% { transform:scale(1.04); filter:brightness(1.5); opacity:1; } }
+
 .coin-action-hotspot { left:18%; top:43%; width:22%; height:32%; }
 .skill-action-hotspot { left:62%; top:15%; width:22%; height:34%; }
 @keyframes actionPulse { 0%,100%{filter:brightness(1)} 50%{filter:brightness(1.35)} }
