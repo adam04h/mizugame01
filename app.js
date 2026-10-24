@@ -559,8 +559,8 @@
   let lobbyRefreshTimer=null, memberHeartbeatTimer=null;
   async function fetchOnlineRooms(){return await rpcWithSession('fantasy_list_rooms');}
   async function refreshOnlineRooms(showError=false){
-    if(!supabaseClient)return;
-    if(!getEntrySessionToken()){if(showError)openEntryGate();return;}
+    if(!supabaseClient)return false;
+    if(!getEntrySessionToken()){if(showError)openEntryGate();return false;}
     try{
       const data=await fetchOnlineRooms();
       for(const room of lobbyRooms){
@@ -574,7 +574,12 @@
         [...members,...npcSlots].slice(0,4).forEach((m,i)=>room.slots[i]=m);
       }
       renderLobby();
-    }catch(error){if(showError)roomCardMessage(error.message||'讀取房間失敗，請重新整理。');}
+      return true;
+    }catch(error){
+      console.warn('讀取線上房間失敗：',error);
+      if(showError)roomCardMessage(`讀取線上房間失敗：${error?.message||'請檢查登入狀態或 Supabase 設定。'}`);
+      return false;
+    }
   }
   function startLobbyRefresh(){
     if(lobbyRefreshTimer)clearInterval(lobbyRefreshTimer);
@@ -1000,22 +1005,63 @@
     return true;
   }
   function roomCardMessage(message){$('lobbyInfoTitle').textContent='房間提示';$('lobbyInfoText').textContent=message;lobbyInfoModal.classList.remove('is-hidden');}
+  function hasLiveHumanMember(room){
+    return Array.isArray(room?.members)&&room.members.some(m=>m&&m.client_id&&m.role!=='npc'&&!m.is_npc&&!String(m.client_id).startsWith('npc-slot-'));
+  }
+  function isOrphanedRoom(room){
+    // NPCs are only local game slots, not true members in online_lobby_members.
+    // A room marked active with no human records cannot be joined or resumed, so offer cleanup/recreation.
+    return !!room?.active&&!hasLiveHumanMember(room)&&(!!room.gameStarted||(room.slots||[]).some(Boolean));
+  }
+  async function cleanupEmptyRooms(targetIndex=null){
+    if(!getEntrySessionToken()){openEntryGate();return;}
+    const message='將清除沒有真人成員的舊房間，並清除超過 15 分鐘沒有心跳的離線玩家紀錄。最近 15 分鐘內仍有真人連線的房間會保留。確定繼續？';
+    if(!window.confirm(message))return;
+    try{
+      const result=await rpcWithSession('fantasy_cleanup_empty_rooms');
+      const refreshed=await refreshOnlineRooms(true);
+      if(!refreshed)return;
+      const removed=Number(result?.deleted_rooms)||0;
+      if(targetIndex!==null){
+        if(!lobbyRooms[targetIndex]?.active){openLobbyForm('create',targetIndex);}
+        else{roomCardMessage('這間房仍有真人玩家心跳，或離線時間還不到 15 分鐘。為保護可恢復中的遊戲，這次沒有清除。請確認其他裝置已離開，或 15 分鐘後再重試。');}
+      }else{
+        roomCardMessage(`清理完成：釋放 ${removed} 間沒有真人成員的舊房間。仍有真人連線或尚在 15 分鐘恢復期限內的房間會保留。`);
+      }
+    }catch(error){roomCardMessage(`清理房間失敗：${error?.message||'請確認已執行 V8.3.4 SQL 更新。'}`);}
+  }
+  function installCleanupButton(){
+    if($('lobbyCleanupButton'))return;
+    const button=document.createElement('button');button.id='lobbyCleanupButton';button.type='button';button.className='lobby-nav';button.textContent='♻ 清理無人房間';
+    Object.assign(button.style,{left:'50%',right:'auto',top:'1.7%',transform:'translateX(-50%)',zIndex:'4',whiteSpace:'nowrap'});
+    button.addEventListener('click',()=>cleanupEmptyRooms());lobbyScreen.appendChild(button);
+  }
+  installCleanupButton();
   function renderLobby(){
     lobbyRoomCards.forEach((card,i)=>{
       const room=lobbyRooms[i],status=card.querySelector('.room-status'),host=card.querySelector('.room-host'),count=card.querySelector('.room-count'),slotsEl=card.querySelector('.room-slots');
-      status.textContent=room.active?(room.status||'等待中'):'尚未建立';status.classList.toggle('active',room.active);host.textContent=`房主：${room.active?room.host:'尚未設定'}`;
-      count.textContent=`${room.active?room.slots.filter(Boolean).length:0} / 4`;slotsEl.innerHTML='';
+      const orphaned=isOrphanedRoom(room);
+      status.textContent=orphaned?'無真人玩家（可重建）':(room.active?(room.status||'等待中'):'尚未建立');
+      status.classList.toggle('active',room.active&&!orphaned);
+      host.textContent=`房主：${orphaned?'尚未連線':(room.active?room.host:'尚未設定')}`;
+      count.textContent=`${orphaned?0:(room.active?room.slots.filter(Boolean).length:0)} / 4`;slotsEl.innerHTML='';
       for(let j=0;j<4;j++){
-        const member=room.active?room.slots[j]:null;const slot=document.createElement('button');slot.type='button';slot.className='room-slot'+(!member?' empty':'');slot.setAttribute('aria-label',`房間 ${i+1} 位置 ${j+1}`);
+        const member=room.active&&!orphaned?room.slots[j]:null;const slot=document.createElement('button');slot.type='button';slot.className='room-slot'+(!member?' empty':'');slot.setAttribute('aria-label',`房間 ${i+1} 位置 ${j+1}`);
         if(member){
           if(member.character_id&&characters[member.character_id]){const img=document.createElement('img');img.src=characters[member.character_id].gif;img.alt='';slot.appendChild(img);}
           else{const waiting=document.createElement('span');waiting.className='slot-symbol';waiting.textContent=member.is_npc?'🤖':'…';slot.appendChild(waiting);}
           const label=document.createElement('strong');label.textContent=member.is_npc?'NPC':(member.player_name||'玩家');slot.appendChild(label);
           const small=document.createElement('small');small.textContent=member.is_npc?'電腦玩家':(member.role==='host'?'房主':(member.is_ready?'已選角色':'尚未選角'));slot.appendChild(small);
         }
-        else{const symbol=document.createElement('span');symbol.className='slot-symbol';symbol.textContent='＋';slot.appendChild(symbol);const label=document.createElement('strong');label.textContent=room.gameStarted?'遊戲進行中':'等待加入';slot.appendChild(label);const small=document.createElement('small');small.textContent=room.active?'點擊輸入密碼':'空位';slot.appendChild(small);if(room.gameStarted)slot.disabled=true;}
+        else{
+          const symbol=document.createElement('span');symbol.className='slot-symbol';symbol.textContent='＋';slot.appendChild(symbol);
+          const label=document.createElement('strong');label.textContent=orphaned?'可重新建立':(room.gameStarted?'遊戲進行中':'等待加入');slot.appendChild(label);
+          const small=document.createElement('small');small.textContent=orphaned?'清理舊房間':(room.active?'點擊輸入密碼':'空位');slot.appendChild(small);
+          if(room.gameStarted&&!orphaned)slot.disabled=true;
+        }
         slot.addEventListener('click',()=>{
-          if(!room.active){roomCardMessage('此房間尚未建立，請點擊「建立房間」先建立房間並設定密碼。');return;}
+          if(orphaned){void cleanupEmptyRooms(i);return;}
+          if(!room.active){openLobbyForm('create',i);return;}
           if(member){
             if(member.is_npc&&activeRoomIndex===i&&lobbyIsHost&&!room.gameStarted){void changeOnlineNpcCount(i,Math.max(0,room.npcCount-1));return;}
             roomCardMessage(member.is_npc?`位置 ${j+1} 是 NPC 電腦玩家。房主可點擊此位置將 NPC 改回真人等待加入。`:`${member.player_name||'玩家'}${member.character_id?'｜已選擇角色':'｜尚未選擇角色'}。如要加入，請選擇空位或點擊「輸入密碼加入」。`);return;
@@ -1026,11 +1072,14 @@
         });
         slotsEl.appendChild(slot);
       }
-      card.querySelector('.room-create').classList.toggle('is-hidden',room.active);
-      card.querySelector('.room-enter').disabled=!room.active||room.gameStarted||room.slots.filter(Boolean).length>=4;
+      const createButton=card.querySelector('.room-create');
+      createButton.classList.toggle('is-hidden',room.active&&!orphaned);
+      createButton.textContent=orphaned?'清理並重建':'建立房間';
+      card.querySelector('.room-enter').classList.toggle('is-hidden',orphaned);
+      card.querySelector('.room-enter').disabled=!room.active||room.gameStarted||room.slots.filter(Boolean).length>=4||orphaned;
       card.querySelector('.room-enter').textContent='輸入密碼加入';
       card.querySelector('.room-settings').classList.add('is-hidden');
-      const canHost=room.active&&activeRoomIndex===i&&lobbyIsHost&&!room.gameStarted;
+      const canHost=room.active&&activeRoomIndex===i&&lobbyIsHost&&!room.gameStarted&&!orphaned;
       card.querySelector('.room-start').classList.toggle('is-hidden',!canHost);card.querySelector('.room-start').textContent='選擇角色';card.querySelector('.room-start').disabled=!canHost;
     });
   }
@@ -1063,7 +1112,7 @@
   }
   function closeLobbyForm(){lobbyModal.classList.add('is-hidden');lobbyFormError.textContent='';}
   lobbyRoomCards.forEach((card,index)=>{
-    card.querySelector('.room-create').addEventListener('click',()=>openLobbyForm('create',index));
+    card.querySelector('.room-create').addEventListener('click',()=>{if(isOrphanedRoom(lobbyRooms[index]))void cleanupEmptyRooms(index);else openLobbyForm('create',index);});
     card.querySelector('.room-enter').addEventListener('click',()=>{if(!lobbyRooms[index].active){roomCardMessage('這間房間尚未建立。請先由房主建立房間並設定密碼。');return;}if(lobbyRooms[index].gameStarted){roomCardMessage('遊戲已開戰，不能中途加入。');return;}openLobbyForm('join',index);});
     card.querySelector('.room-settings').addEventListener('click',()=>openLobbyForm('settings',index));
     card.querySelector('.room-start').addEventListener('click',()=>{if(activeRoomIndex!==index||!lobbyIsHost)return;playTone('confirm');lobbyNpcCount=Number(lobbyRooms[index].npcCount)||0;show(characterScreen);refreshCharacterAvailability();});
