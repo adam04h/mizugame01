@@ -151,13 +151,6 @@ button, select { font: inherit; }
 .board-action-hotspot { position:absolute; z-index:8; padding:0; border:0; background:transparent; border-radius:50%; cursor:pointer; }
 .board-action-hotspot:disabled { cursor:default; pointer-events:none; }
 .board-action-hotspot:not(:disabled) { outline:2px solid #ffe48b; box-shadow:0 0 0 5px #ffd45b30,0 0 24px #ffca46b8; animation:actionPulse 1.4s ease-in-out infinite; }
-/* V8.3.2: make the coin and skill pool targets unmistakable when an action is available. */
-.board-action-hotspot.pool-ready { outline:none !important; overflow:visible; z-index:30; }
-.board-action-hotspot.pool-ready::before { content:""; position:absolute; inset:5%; display:block; border:6px solid #fff5a6; border-radius:50%; background:radial-gradient(circle, #ffe46b22 0 48%, #ffca3650 70%, #ffb92c10 100%); box-shadow:0 0 0 7px #ffcc3b88, 0 0 24px 9px #ffdc54, inset 0 0 16px #fff4a6; pointer-events:none; animation:poolTargetPulse .78s ease-in-out infinite; }
-.board-action-hotspot.pool-ready::after { content:"點擊領取金幣"; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); display:block; width:max-content; max-width:160%; white-space:nowrap; padding:6px 11px; border:2px solid #fff2a1; border-radius:999px; color:#fffbe2; background:linear-gradient(#855600f2,#4c2c00f5); font-size:clamp(11px,.9vw,16px); line-height:1.2; font-weight:1000; text-shadow:0 1px 2px #251400; box-shadow:0 0 18px #ffcd44, inset 0 1px 2px #fff9; pointer-events:none; }
-.board-action-hotspot.pool-ready[aria-label="抽取招式"]::after { content:"點擊抽取招式"; }
-@keyframes poolTargetPulse { 0%,100% { transform:scale(.96); filter:brightness(1); opacity:.94; } 50% { transform:scale(1.04); filter:brightness(1.5); opacity:1; } }
-
 .coin-action-hotspot { left:18%; top:43%; width:22%; height:32%; }
 .skill-action-hotspot { left:62%; top:15%; width:22%; height:34%; }
 @keyframes actionPulse { 0%,100%{filter:brightness(1)} 50%{filter:brightness(1.35)} }
@@ -772,3 +765,107 @@ button, select { font: inherit; }
 /* Online lobby: make reserved characters clearly unavailable. */
 .character-hotspot:disabled { cursor: not-allowed !important; background: rgba(3, 9, 20, .38) !important; border: 2px solid rgba(255, 222, 136, .85) !important; box-shadow: inset 0 0 0 999px rgba(3, 9, 20, .32) !important; }
 .character-hotspot:disabled::after { content: '已被選擇'; position: absolute; inset: 0; display: grid; place-items: center; padding: 4px; border-radius: 8px; background: rgba(3, 9, 20, .64); color: #ffe39a; font-weight: 900; font-size: clamp(12px, 1.5vw, 22px); text-shadow: 0 2px 6px #000; }
+
+/* V8.4 shared treasure hunt mini-game */
+.treasure-game-modal{position:fixed;inset:0;z-index:2400;display:grid;place-items:center;padding:clamp(6px,1.4vw,20px);background:radial-gradient(ellipse at 50% 20%,#18314fef,#030915f7 76%);backdrop-filter:blur(8px);overflow:auto}
+.treasure-game-modal.is-hidden{display:none!important}
+.treasure-game-frame{width:min(1480px,98vw);max-height:96dvh;display:grid;place-items:center;position:relative}
+.treasure-rule-stage,.treasure-play-stage,.treasure-result-stage{width:100%;position:relative;border:2px solid #e6bd63;border-radius:18px;overflow:hidden;background:#09182c;box-shadow:0 18px 60px #000a,0 0 0 4px #e2b44a22}
+.treasure-rule-stage img{display:block;width:100%;height:auto;max-height:92dvh;object-fit:contain}
+.treasure-rule-countdown{position:absolute;right:2.2%;bottom:3%;display:grid;justify-items:center;gap:0;padding:6px 18px;border:2px solid #ffe18a;border-radius:16px;color:#fff4d0;background:#082b53e8;box-shadow:0 0 20px #ffcf6577}
+.treasure-rule-countdown span{font-size:clamp(10px,1.1vw,18px);font-weight:800}.treasure-rule-countdown strong{font-size:clamp(28px,4vw,58px);line-height:1;color:#ffe28a;text-shadow:0 2px 8px #000}
+.treasure-play-stage{padding:clamp(5px,.7vw,10px);box-sizing:border-box}
+.treasure-play-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 10px 8px;color:#ffe4a0;font-weight:900;flex-wrap:wrap}
+.treasure-play-heading strong{font-size:clamp(18px,2vw,28px);letter-spacing:1px}.treasure-play-heading span{font-size:clamp(12px,1.15vw,17px);color:#eaf3ff}
+.treasure-canvas{position:relative;width:100%;aspect-ratio:3/2;overflow:hidden;border-radius:12px;isolation:isolate;user-select:none;touch-action:manipulation}
+.treasure-canvas>img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none;z-index:0}
+.treasure-hotspots{position:absolute;inset:0;z-index:2;pointer-events:none}
+.treasure-hotspot{position:absolute;display:block;padding:0;margin:0;border:1px solid transparent;border-radius:50%;background:transparent;pointer-events:auto;cursor:crosshair;touch-action:manipulation;transition:filter .12s,border-color .12s,background .12s}
+.treasure-hotspot:hover,.treasure-hotspot:focus-visible{outline:none;border:2px solid #ffe57c;background:#ffd95022;box-shadow:0 0 12px #ffdf63;filter:brightness(1.12)}
+.treasure-hotspot.is-found{pointer-events:none;border:2px solid #8dffd9;background:rgba(3,18,32,.97);backdrop-filter:blur(9px) brightness(.12);box-shadow:inset 0 0 16px #7dffd355,0 0 12px #7dffd366}
+.treasure-hotspot.is-found:after{content:'✓';position:absolute;inset:0;display:grid;place-items:center;color:#bfffe3;font-weight:1000;font-size:clamp(13px,2vw,30px);text-shadow:0 1px 5px #000}
+.treasure-prompt-grid{position:absolute;left:20.1%;bottom:2.3%;width:59.5%;height:14.6%;z-index:4;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));column-gap:3.1%;row-gap:9%;pointer-events:none}
+.treasure-prompt{display:flex;align-items:center;justify-content:center;text-align:center;min-width:0;min-height:0;padding:2px 5px;box-sizing:border-box;border-radius:22px;color:#fff;font-weight:1000;font-size:clamp(11px,1.55vw,24px);line-height:1.15;letter-spacing:.02em;text-shadow:0 2px 3px #06264d,0 0 8px #05234b;background:#0b3d6b55;overflow-wrap:anywhere}
+.treasure-prompt.is-empty{background:transparent;box-shadow:none}
+.treasure-timer{position:absolute;left:1.8%;bottom:4.1%;width:15%;height:7.2%;z-index:5;display:grid;place-items:center;pointer-events:none;color:#fff;font-size:clamp(18px,2.3vw,36px);font-weight:1000;text-shadow:0 2px 4px #000,0 0 8px #11385f}
+.treasure-progress-pill{position:absolute;right:2.4%;bottom:4.2%;width:13%;height:7%;z-index:5;display:grid;place-items:center;pointer-events:none;color:#fff;font-size:clamp(19px,2.5vw,38px);font-weight:1000;text-shadow:0 2px 4px #000,0 0 8px #11385f}
+.treasure-score-pill{position:absolute;right:2.8%;top:2.2%;z-index:5;display:grid;place-items:center;padding:5px 14px;border:1px solid #ffe18b;border-radius:999px;background:#072d55dc;color:#ffe18b;font-weight:1000;font-size:clamp(12px,1.3vw,18px);pointer-events:none}
+.treasure-countdown-overlay{position:absolute;z-index:8;inset:0;display:grid;place-items:center;background:#0011275c;color:#fff2ae;font-size:clamp(100px,19vw,260px);font-weight:1000;line-height:1;text-shadow:0 8px 26px #000,0 0 24px #ffdb68;animation:treasureCountPulse .9s ease-in-out infinite alternate;pointer-events:none}
+.treasure-countdown-overlay.is-hidden{display:none!important}
+@keyframes treasureCountPulse{from{transform:scale(.94);opacity:.82}to{transform:scale(1.05);opacity:1}}
+.treasure-play-tip{margin:6px 4px 1px;color:#eaf2ff;text-align:center;font-size:clamp(11px,1.05vw,15px);font-weight:700}
+.treasure-result-stage{box-sizing:border-box;max-height:94dvh;overflow:auto;padding:clamp(14px,2.3vw,30px);color:#eef5ff;text-align:center;background:radial-gradient(ellipse at top,#233e60,#071323 72%)}
+.treasure-result-emblem{font-size:clamp(36px,5vw,64px);filter:drop-shadow(0 4px 12px #f2c15c88)}
+.treasure-result-stage h2{margin:5px 0 7px;color:#ffe08a;font-size:clamp(22px,3vw,36px)}.treasure-result-stage p{margin:0 0 14px;color:#dbe8f7}
+.treasure-result-rows{display:grid;gap:8px;margin:0 auto 18px;max-width:900px;text-align:left}
+.treasure-rank-row{display:grid;grid-template-columns:auto minmax(90px,1fr) auto;align-items:center;gap:8px 14px;padding:10px 14px;border:1px solid #7189a5;border-radius:12px;background:linear-gradient(100deg,#172b45,#0a1627)}
+.treasure-rank-row>strong{color:#ffe08a;white-space:nowrap}.treasure-rank-name{font-weight:900}.treasure-rank-row>b{color:#c8e5ff;white-space:nowrap}.treasure-rank-row>small{grid-column:2/4;color:#f7d993;font-weight:800}
+.treasure-rank-row.rank-1{border-color:#ffdd79;background:linear-gradient(100deg,#49391b,#14233a)}.treasure-rank-row.rank-2{border-color:#c3d4e8}.treasure-rank-row.rank-3{border-color:#bd8b69}
+@media(max-width:700px){.treasure-game-modal{padding:3px}.treasure-game-frame{width:100vw;max-height:99dvh}.treasure-play-stage{padding:3px}.treasure-play-heading{padding:1px 4px 4px}.treasure-prompt{font-size:clamp(9px,2.4vw,15px);border-radius:8px;padding:1px}.treasure-prompt-grid{left:20%;width:60%;column-gap:3%;row-gap:7%;height:14.6%;bottom:2.4%}.treasure-rule-stage img{max-height:96dvh}.treasure-rule-countdown{right:2%;bottom:2%;padding:3px 10px}.treasure-result-stage{padding:10px}.treasure-rank-row{grid-template-columns:auto 1fr auto;gap:5px;padding:8px}.treasure-rank-row>small{grid-column:1/4}.treasure-score-pill{right:2%;top:1%;padding:3px 8px}}
+
+
+
+/* V8.4.2 treasure hunt visual calibration — exact source image aspect ratio */
+.treasure-canvas{aspect-ratio:2000 / 1342;}
+/* Target areas are invisible while hovering/focusing. A successful find alone shows a check. */
+.treasure-hotspot,
+.treasure-hotspot:hover,
+.treasure-hotspot:active,
+.treasure-hotspot:focus,
+.treasure-hotspot:focus-visible{
+  outline:0!important;border:0!important;box-shadow:none!important;
+  background:transparent!important;filter:none!important;transform:none!important;
+}
+.treasure-hotspot{border-radius:9px!important;}
+.treasure-hotspot{cursor:default!important;}
+.treasure-hotspot.is-found{
+  border:0!important;border-radius:9px!important;
+  background:rgba(3,18,32,.94)!important;backdrop-filter:none!important;box-shadow:none!important;
+}
+.treasure-hotspot.is-found::after{
+  content:'✓';color:#bfffe3;font-weight:1000;font-size:clamp(16px,2.2vw,32px);
+  text-shadow:0 2px 5px #000;
+}
+/* Scenes 01/02: six blue trays in the lower strip. */
+.treasure-prompt-grid{
+  left:20.65%;top:84.9%;bottom:auto;width:58.6%;height:13.7%;
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));
+  column-gap:3.16%;row-gap:7%;padding:0;box-sizing:border-box;pointer-events:none;
+}
+.treasure-prompt{
+  display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-width:0;min-height:0;
+  padding:2px 4px;box-sizing:border-box;border:0;border-radius:18px;background:transparent;
+  color:#fff;font-weight:1000;font-size:clamp(10px,1.08vw,17px);line-height:1.12;letter-spacing:.02em;
+  text-align:center;white-space:normal;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;
+  text-shadow:0 2px 3px #06264d,0 0 8px #05234b;
+}
+.treasure-prompt.is-empty{background:transparent;box-shadow:none;}
+.treasure-timer{
+  left:7.0%;top:89.5%;bottom:auto;width:8.8%;height:6.0%;padding:0;box-sizing:border-box;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;text-align:center;
+  color:#fff;font-size:clamp(15px,1.9vw,29px);font-weight:1000;line-height:1;white-space:nowrap;
+}
+.treasure-progress-pill{
+  right:2.0%;top:89.4%;bottom:auto;width:12.5%;height:6.1%;padding:0;box-sizing:border-box;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;text-align:center;
+  color:#fff;font-size:clamp(16px,2.0vw,30px);font-weight:1000;line-height:1;white-space:nowrap;
+}
+.treasure-timer strong,.treasure-progress-pill strong{display:block;max-width:100%;overflow:hidden;text-overflow:clip;white-space:nowrap;line-height:1;}
+.treasure-score-pill{pointer-events:none;}
+/* Scene 03's supplied lower HUD begins higher and its six trays are narrower. */
+.treasure-canvas[data-mode="03"] .treasure-prompt-grid{
+  left:22.3%;top:79.6%;width:55.5%;height:19.0%;column-gap:2.2%;row-gap:6.5%;
+}
+.treasure-canvas[data-mode="03"] .treasure-prompt{font-size:clamp(9px,1.02vw,16px);padding:2px 3px;}
+.treasure-canvas[data-mode="03"] .treasure-timer{
+  left:7.5%;top:85.8%;width:10.0%;height:8.5%;font-size:clamp(15px,1.85vw,28px);
+}
+.treasure-canvas[data-mode="03"] .treasure-progress-pill{
+  right:2.0%;top:85.7%;width:13.0%;height:8.5%;font-size:clamp(16px,2.0vw,29px);
+}
+@media(max-width:700px){
+  .treasure-prompt{font-size:clamp(8px,1.15vw,12px);padding:1px 2px;border-radius:8px;}
+  .treasure-timer{font-size:clamp(10px,1.5vw,15px);}
+  .treasure-progress-pill{font-size:clamp(11px,1.55vw,16px);}
+  .treasure-canvas[data-mode="03"] .treasure-prompt{font-size:clamp(8px,1.0vw,11px);}
+}

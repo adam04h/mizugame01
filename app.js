@@ -1,6 +1,7 @@
 (() => {
   const $ = id => document.getElementById(id);
   const startScreen=$('startScreen'), lobbyScreen=$('lobbyScreen'), characterScreen=$('characterScreen'), mapScreen=$('mapScreen');
+  const treasureGameModal=$('treasureGameModal'),treasureRuleStage=$('treasureRuleStage'),treasureRuleCountdown=$('treasureRuleCountdown'),treasurePlayStage=$('treasurePlayStage'),treasurePlayImage=$('treasurePlayImage'),treasureHotspots=$('treasureHotspots'),treasurePromptGrid=$('treasurePromptGrid'),treasureTimerText=$('treasureTimerText'),treasureProgressText=$('treasureProgressText'),treasureScoreText=$('treasureScoreText'),treasureModeText=$('treasureModeText'),treasurePlayerText=$('treasurePlayerText'),treasureCountdownOverlay=$('treasureCountdownOverlay'),treasureResultStage=$('treasureResultStage'),treasureResultRows=$('treasureResultRows'),treasureContinueButton=$('treasureContinueButton'),treasureCanvas=$('treasureCanvas');
   const entryGateModal=$('entryGateModal'), entryGateForm=$('entryGateForm'), entryGatePassword=$('entryGatePassword'), entryGateError=$('entryGateError');
   const startButton=$('startButton'), confirmButton=$('confirmCharacter'), characterArtwork=$('characterArtwork'), characterStatsOverlay=$('characterStatsOverlay'), battleStartButton=$('battleStartButton'), readyStatus=$('readyStatus');
   const selfLifeHearts=$('selfLifeHearts'), gameOverModal=$('gameOverModal'), gameOverRankings=$('gameOverRankings'), gameOverReason=$('gameOverReason');
@@ -64,7 +65,7 @@
   const path=[[.072,.895],[.190,.895],[.285,.895],[.382,.895],[.478,.895],[.575,.895],[.673,.895],[.772,.895],[.910,.895],[.948,.785],[.948,.665],[.948,.550],[.948,.435],[.948,.320],[.948,.205],[.930,.070],[.832,.070],[.725,.070],[.620,.070],[.520,.070],[.415,.070],[.315,.070],[.205,.070],[.070,.070],[.070,.175],[.070,.285],[.070,.395],[.070,.505],[.070,.615],[.070,.735]];
   const middlePath=[[.231,.232],[.306,.315],[.384,.395],[.456,.467],[.536,.540],[.619,.619],[.693,.694],[.768,.768]];
   const poses={1:[0,0],6:[0,180],3:[0,-90],4:[0,90],2:[-90,0],5:[90,0]};
-  const coinTiles=new Set([1,3,7,10,13,26,27,30]); // position 2 (outer tile #3) is the shop now.
+  const coinTiles=new Set([1,3,7,10,13,26,30]); // Outer tile #28 (zero-based position 27) is the shared treasure hunt.
   let selectedCharacter='odyssey',players=[],currentPlayer=0,round=1,night=false,busy=false,audioContext,pendingTurnAction=false,pendingSkill=null,modalActionType=null,gameStarted=false,gameOver=false,sharedTurnRevision=0;
   let countdownTimer=null,countdownLeft=10,pauseTimer=null,pauseInterval=null,pauseActive=false,duelState=null,duelResolve=null,coinRevealResolve=null,pendingCoinEvents=[],actionTimeout=null,finishingTurn=false,completingPendingAction=false,availableSkills=[...skills],pendingSkills=[],pendingSkillReplacements=[];
   let shopTimer=null,shopTick=null,shopRemaining=15,shopResolve=null,shopBoughtThisVisit=new Set();
@@ -305,6 +306,7 @@
     if(pos===20){p.maxHP+=1;p.hp+=1;rollResult.textContent=`HP 上限 +1、目前 HP +1（累加後 ${p.hp}/${p.maxHP}）。`;}
     if(pos===24){const total=takeCoins(p,{coins:0,player_name:'NPC'},2,'NPC 奪取金幣');rollResult.textContent=`金幣被 NPC 奪取：本次損失 ${total} 金幣。`;}
     if(pos===25){if(p.controlType==='npc'){const destination=Math.floor(Math.random()*(path.length+middlePath.length));p.position=destination;if(destination>=30)p.middleDirection=destination<=33?1:-1;else p.middleDirection=0;positionAllTokens();playEffectTone('teleport');rollResult.textContent=`NPC 選擇傳送至第 ${destination+1} 格。`;await publishOnlineState();const ended=await resolveLandingCollision(p);await publishOnlineState();if(ended){p._forceFinishAfterDuel=true;return;}if(destination!==25)await resolveLanding(p,false);}else{await chooseMapDestination(p);if(p.position!==25){await publishOnlineState();const ended=await resolveLandingCollision(p);await publishOnlineState();if(ended){p._forceFinishAfterDuel=true;return;}await resolveLanding(p,false);}}}
+    if(pos===27){await startTreasureGame(p);}
     if(pos===28){const target=await choosePlayerOnMap(p,'選擇任一玩家｜互換角色樣貌與基本能力（保留各自金幣及抽到的技能）');if(target){const keys=['character','hp','maxHP','baseHP','attack','defense'];const a={},b={};keys.forEach(k=>{a[k]=p[k];b[k]=target[k];});const ownEarned=(player)=>player.skills.filter(skill=>!skill.base);Object.assign(p,b);Object.assign(target,a);const syncBaseSkill=(player)=>{const c=characters[player.character];player.skills=[{name:c.baseSkill,base:true,image:c.baseImage,desc:'角色基本技能；效果依照角色基本攻擊規則。'},...ownEarned(player)].slice(0,4);};syncBaseSkill(p);syncBaseSkill(target);rollResult.textContent='角色樣貌與基本能力已互換；金幣及各自抽到的技能保持不變。';renderPlayers();}}
     if(pos===29){p.attack+=1;rollResult.textContent='攻擊 +1。';}
     if(pos===30){rollResult.textContent='金幣 ×3：可領取三張金幣獎勵。';}
@@ -489,7 +491,7 @@
   function commitPendingSkills(){const p=players[currentPlayer];if(!p||!pendingSkills.length)return false;const selections=pendingSkillReplacements.map(el=>el.value);if(selections.some(v=>!v)||new Set(selections).size!==selections.length){rollResult.textContent='請選擇要替換的技能；基本技能不可放棄。';return false;}let replacementIndex=0;for(const skill of pendingSkills){if(p.skills.length<4)p.skills.push(skill);else{const idx=Number(pendingSkillReplacements[replacementIndex++].value);const old=p.skills[idx];if(!old||old.base){rollResult.textContent='基本技能不可替換，請重新選擇。';return false;}availableSkills.push(old);p.skills[idx]=skill;}}availableSkills=availableSkills.filter(s=>!pendingSkills.some(pending=>pending.name===s.name));renderPlayers();rollResult.textContent=`獲得招式：${pendingSkills.map(s=>s.name).join('、')}`;return true;}
   function weightedCoins(){const r=Math.random();return r<.8?10:r<.9?100:r<.95?500:1000;}
   async function collectCoin(p){
-    const tileMultipliers=({3:2,13:2,26:5,27:2,30:3});
+    const tileMultipliers=({3:2,13:2,26:5,30:3});
     const tileDraws=coinTiles.has(p.position)?(tileMultipliers[p.position]||1):0;
     const lapDraws=Math.max(0,p.lapRewards||0);
     let drawCount=tileDraws+lapDraws;
@@ -825,6 +827,7 @@
       currentPlayerId:players[currentPlayer]?.onlineClientId||null,round,night,gameStarted,gameOver,
       availableSkillNames:availableSkills.map(skill=>skill.name),
       rollText:rollResult?.textContent||'',duel:serialiseOnlineDuel(),duelResult:onlineDuelResult,
+      treasureGame:treasureGame?JSON.parse(JSON.stringify(treasureGame)):null,
       coinEvents:[...onlineCoinEventsQueue]};
   }
   async function publishOnlineState(){
@@ -969,6 +972,7 @@
       window.setMapTime(night?'night':'day');if(payload.rollText&&rollResult)rollResult.textContent=payload.rollText;
       onlineDuelResult=payload.duelResult||onlineDuelResult;
       applyOnlineDuelSnapshot(payload.duel||null,payload.duelResult||null);
+      if(payload.treasureGame)applyTreasureGameSnapshot(payload.treasureGame);
       processOnlineCoinEvents(payload.coinEvents);
       if(gameStarted){battleStartButton.classList.add('is-hidden');readyStatus.textContent='戰鬥進行中｜已同步線上狀態';}
       renderPlayers();updateTurnUI();
@@ -995,6 +999,10 @@
     onlineGameChannel.on('broadcast',{event:'duel-state'},({payload})=>{if(payload?.roomId===onlineGameRoomId)applyOnlineState(payload);});
     onlineGameChannel.on('broadcast',{event:'game-start'},({payload})=>{if(payload?.roomId===onlineGameRoomId){applyOnlineState(payload.state);}});
     onlineGameChannel.on('broadcast',{event:'game-over'},({payload})=>{if(payload?.roomId===onlineGameRoomId)applyOnlineState(payload);});
+    onlineGameChannel.on('broadcast',{event:'treasure-start-request'},({payload})=>{if(lobbyIsHost&&payload?.roomId===onlineGameRoomId)hostStartTreasureGame(payload);});
+    onlineGameChannel.on('broadcast',{event:'treasure-start'},({payload})=>{if(payload?.roomId===onlineGameRoomId)applyTreasureGameSnapshot(payload.game);});
+    onlineGameChannel.on('broadcast',{event:'treasure-progress'},({payload})=>{if(payload?.roomId===onlineGameRoomId)handleTreasureProgress(payload);});
+    onlineGameChannel.on('broadcast',{event:'treasure-finish'},({payload})=>{if(payload?.roomId===onlineGameRoomId)handleTreasureFinish(payload);});
     await new Promise((resolve,reject)=>{let settled=false;const timer=setTimeout(()=>{if(!settled){settled=true;reject(new Error('即時房間連線逾時，請重新整理再試。'));}},12000);onlineGameChannel.subscribe(async status=>{
       if(status==='SUBSCRIBED'&&!settled){settled=true;clearTimeout(timer);try{await onlineGameChannel.track({clientId:lobbyClientId,playerName:onlinePlayerName,characterId:selectedCharacter,isHost:lobbyIsHost,joinedAt:Date.now()});resolve();}catch(e){reject(e);}}
       else if((status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED')&&!settled){settled=true;clearTimeout(timer);reject(new Error('Supabase 即時頻道連線失敗。'));}
@@ -1374,6 +1382,182 @@
   async function escapeDuel(side){if(!duelState||duelState.phase!=='action'||duelState.actionCount<6||duelState.actionCount%2!==0)return;const escapee=side==='left'?duelState.left:duelState.right;if(escapee!==players[0])return;playTone('click');const coinLoss=Math.min(escapee.coins,Math.floor(Math.max(0,escapee.coins)*0.2));escapee.coins=Math.max(0,escapee.coins-coinLoss);const removable=escapee.skills.map((skill,index)=>({skill,index})).filter(item=>!item.skill.base);let lostSkill=null;if(removable.length){const chosen=removable[Math.floor(Math.random()*removable.length)];lostSkill=chosen.skill;escapee.skills.splice(chosen.index,1);const poolSkill=skills.find(item=>item.name===lostSkill.name);if(poolSkill&&!availableSkills.some(item=>item.name===poolSkill.name))availableSkills.push(poolSkill);}duelStatus.textContent='自身玩家選擇逃跑，已扣除 20% 金幣並隨機失去一項非基本技能。';[duelState.left,duelState.right].forEach(player=>{player.duelPoisoned=false;player.duelRegenActive=false;player.duelDefenseDrain=false;player.sealedTurns=0;player.immuneNext=false;});onlineDuelResult={id:`duel-escape-${onlineGameRoomId||'offline'}-${Date.now()}`,winnerId:null,loserId:escapee.onlineClientId||null,bothDead:false};duelModal.classList.add('is-hidden');stopBattleMusic();duelState=null;duelFinishing=false;npcDuelActionKey='';if(gameStarted)startGameMusic();duelEscapeLeft.classList.add('is-hidden');duelEscapeRight.classList.add('is-hidden');renderPlayers();updateTurnUI();rollResult.textContent=`你選擇逃跑：損失 ${coinLoss} 枚金幣${lostSkill?`，並失去招式「${lostSkill.name}」`:'；目前沒有可失去的非基本技能'}。`;await publishOnlineState();await showCoinBatch('逃跑代價｜損失金幣與招式',[{amount:coinLoss,kind:'loss'}],lostSkill?`逃跑扣除 20% 金幣，並隨機失去招式「${lostSkill.name}」。`:'逃跑扣除 20% 金幣；目前沒有可失去的非基本技能。');closeModal();if(duelResolve){const resolve=duelResolve;duelResolve=null;resolve({escaped:true,escapee});}}
   duelEscapeLeft.addEventListener('click',()=>escapeDuel('left'));duelEscapeRight.addEventListener('click',()=>escapeDuel('right'));
   duelRollButton.addEventListener('click',rollDuelDice);duelUseSkill.addEventListener('click',()=>{if(duelState)performDuelSkill((duelState.actionSkills||usableDuelSkills(duelState.attacker))[Number(duelSkillSelect.value)]);});
+  // V8.4 shared treasure hunt: same random scene/order for the whole room;
+  // each human/NPC keeps an independent score and found-object list.
+  let treasureGame=null,treasureClock=null,treasureNpcTimer=null,treasurePersistTimer=null;
+  let treasureGameResolve=null,treasureFinishBusy=false,treasureUiGameId=null,treasureWrongAt=0,treasureResultDismissedId=null;
+  const treasureModeLabels={'01':'海底尋寶','02':'城堡尋寶','03':'森林尋寶'};
+  const treasureCatalog={
+    '01':[
+      {id:'starfish',name:'海星',box:[2,68,10,13]},{id:'seashell',name:'海螺殼',box:[11,64,8,9]},{id:'pearl-shell',name:'珍珠貝殼',box:[15,68,12,12]},
+      {id:'clownfish',name:'小丑魚',box:[18,50,13,11]},{id:'diving-mask',name:'潛水面鏡',box:[27,41,10,11]},{id:'drift-bottle',name:'綠色漂流瓶',box:[38,31,8,14]},
+      {id:'anchor',name:'鐵錨',box:[74,38,12,17]},{id:'pocket-watch',name:'金色懷錶',box:[56, 44, 8, 11]},{id:'seahorse',name:'海馬',box:[44,31,9,17]},
+      {id:'turtle',name:'海龜',box:[32,10,14,14]},{id:'ship-wheel',name:'古老船舵',box:[63,55,10,12]},{id:'trident',name:'金色三叉戟',box:[40,55,9,15]},
+      {id:'treasure-chest',name:'藏寶箱',box:[24,43,10,15]},{id:'coin-pile',name:'成堆金幣',box:[30,64,10,10]},{id:'magnifier',name:'放大鏡',box:[46, 67, 11, 11]},
+      {id:'jellyfish',name:'發光水母',box:[12,24,13,20]},{id:'octopus',name:'章魚',box:[76,44,11,16]},{id:'submarine',name:'黃色潛水艇模型／玩具',box:[80,49,9,12]},
+      {id:'spyglass',name:'單筒望遠鏡',box:[76, 65, 9, 10]},{id:'treasure-map',name:'古老藏寶圖',box:[87, 62, 9, 11]},{id:'gold-key',name:'金色鑰匙',box:[64, 45, 8, 10]},
+      {id:'red-crab',name:'紅色螃蟹',box:[83,65,11,13]},{id:'urchin',name:'海膽',box:[94,72,5,9]},{id:'underwater-camera',name:'水下相機',box:[77,55,8,10]},{id:'blue-crystal',name:'藍色發光水晶',box:[0,42,8,13]}
+    ],
+    '02':[
+      {id:'compass-stair',name:'指南針',box:[3.2, 47, 9.5, 14]},
+      {id:'small-gold-key',name:'小金鑰匙',box:[12, 71, 6, 6]},
+      {id:'large-metal-gear',name:'金屬大齒輪',box:[0, 72, 8, 11]},
+      {id:'gold-pocket-watch',name:'金色懷錶',box:[18.5, 57.5, 8.5, 14]},
+      {id:'long-gold-key',name:'長柄金鑰匙',box:[12, 43.5, 8.5, 7.5]},
+      {id:'star-magic-book',name:'星紋魔法書',box:[12.3, 31, 10, 13]},
+      {id:'metal-shield',name:'金屬盾牌',box:[5.5, 20, 9.5, 15]},
+      {id:'flight-goggles',name:'護目鏡（飛行風鏡）',box:[27, 49, 11, 9]},
+      {id:'small-horizontal-binoculars',name:'橫放雙筒小望遠鏡',box:[30, 63, 9, 8]},
+      {id:'tripod-telescope',name:'大型三腳架天文望遠鏡',box:[39, 36, 12, 25]},
+      {id:'glowing-pastel-flower',name:'粉彩發光花朵',box:[44, 47, 8, 10]},
+      {id:'feather-ink-bottle',name:'羽毛墨水瓶',box:[54, 51, 7, 11]},
+      {id:'flat-round-compass',name:'平躺圓形羅盤',box:[48, 65, 10, 9]},
+      {id:'windmill-model',name:'小風車模型',box:[54, 29, 8, 13]},
+      {id:'magnifier-windmill-shrub',name:'放大鏡',box:[60, 38, 7, 9]},
+      {id:'striped-balloon',name:'彩色條紋氣球',box:[65, 24, 7, 12]},
+      {id:'upright-binoculars',name:'立式雙筒望遠鏡',box:[61, 64, 9, 11]},
+      {id:'craftsman-hammer',name:'工匠鐵鎚',box:[71, 67, 7, 10]},
+      {id:'scattered-gears',name:'地面散落齒輪',box:[76, 73, 8, 9]},
+      {id:'long-spout-watering-can',name:'金屬長嘴澆水壺',box:[63, 51, 8, 11]},
+      {id:'leather-adventure-backpack',name:'冒險皮革背包',box:[74, 50, 11, 16]},
+      {id:'blue-blueprint',name:'藍色建築圖紙',box:[79, 62, 9, 8]},
+      {id:'wooden-folding-fan',name:'復古木骨摺扇',box:[85, 53, 9, 9]},
+      {id:'double-glass-hourglass',name:'玻璃雙球沙漏',box:[91, 64, 8, 12]},
+      {id:'blue-purple-crystal',name:'藍紫色發光水晶（寶石）',box:[91, 77, 8, 9]}
+    ],
+    '03':[
+      {id:'pocket-watch',name:'懷錶',box:[2.5, 42, 6, 13]},{id:'color-feather',name:'彩色羽毛',box:[9, 22, 10, 12]},{id:'butterfly',name:'彩色蝴蝶',box:[20, 20, 10, 14]},
+      {id:'insect-net',name:'昆蟲網／捕蝶網',box:[17, 39, 10, 19]},{id:'shell',name:'貝殼',box:[28, 48, 6, 8]},{id:'emerald',name:'綠寶石',box:[34, 42, 7, 10]},
+      {id:'compass',name:'指南針',box:[34, 49, 12, 15]},{id:'squirrel',name:'松鼠',box:[13, 60, 9, 12]},{id:'small-shovel',name:'小鐵鏟',box:[22, 63, 10, 10]},
+      {id:'glasses',name:'黑框眼鏡',box:[43, 43, 8, 8]},{id:'rope',name:'一捆繩索',box:[46, 55, 10, 11]},{id:'glowing-mushroom',name:'發光蘑菇',box:[48, 35, 12, 20]},
+      {id:'magnifier',name:'放大鏡',box:[62, 56, 12, 12]},{id:'hanging-lantern',name:'吊掛油燈',box:[52, 7, 8, 17]},{id:'spyglass',name:'單筒望遠鏡',box:[52, 25, 12, 12]},
+      {id:'backpack',name:'冒險背包',box:[67, 43, 11, 18]},{id:'treasure-map',name:'藏寶圖／羊皮紙',box:[76, 54, 11, 10]},{id:'birdhouse',name:'小木鳥屋',box:[70, 15, 15, 16]},
+      {id:'bird',name:'小鳥',box:[76, 3, 9, 11]},{id:'gold-key',name:'金色鑰匙',box:[80, 39, 9, 11]},{id:'hunting-knife',name:'獵刀／短刀',box:[86, 50, 8, 9]},
+      {id:'water-flask',name:'水壺／水囊',box:[92, 29, 8, 13]},{id:'mango',name:'熱帶水果／芒果',box:[89, 59, 10, 15]},{id:'wooden-barrel',name:'木桶',box:[0, 52, 7, 14]},{id:'blue-mushrooms',name:'藍光小蘑菇',box:[20, 68, 8, 10]}
+    ]
+  };
+  function cloneTreasure(value){return value?JSON.parse(JSON.stringify(value)):null;}
+  function treasurePlayerId(player){if(player?.onlineClientId)return player.onlineClientId;if(player?.clientId)return player.clientId;const index=players.indexOf(player);return index===0?`local:${lobbyClientId||'offline'}`:`offline-player-${Math.max(0,index)}`;}
+  function isTreasureAuthority(){return onlineGameRoomId?!!lobbyIsHost:true;}
+  function treasureProgressFor(clientId){
+    if(!treasureGame)return null;
+    if(!treasureGame.playerScores)treasureGame.playerScores={};
+    if(!treasureGame.playerScores[clientId])treasureGame.playerScores[clientId]={score:0,foundIds:[],wrong:0,revision:0,completedAt:null,elapsedMs:null,done:false};
+    return treasureGame.playerScores[clientId];
+  }
+  function treasurePromptIds(progress){const found=new Set(progress?.foundIds||[]);return (treasureGame?.targetOrder||[]).filter(id=>!found.has(id)).slice(0,6);}
+  function treasureCurrentPlayerId(){const me=players.find(p=>p.controlType==='local'&&p.onlineClientId===lobbyClientId)||players.find(p=>p.onlineClientId===lobbyClientId)||players[0];return treasurePlayerId(me);}
+  function treasureCurrentCatalog(){return treasureCatalog[treasureGame?.mode]||treasureCatalog['01'];}
+  function treasureTargetById(id){return treasureCurrentCatalog().find(item=>item.id===id);}
+  function treasureRandomOrder(mode){const ids=treasureCatalog[mode].map(item=>item.id);for(let i=ids.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ids[i],ids[j]]=[ids[j],ids[i]];}return ids;}
+  const TREASURE_MODE_BAG_KEY='fantasy-board-treasure-mode-bag-v2';
+  function treasureNextMode(){
+    const allModes=['01','02','03'];let state={bag:[],last:null};
+    try{const raw=localStorage.getItem(TREASURE_MODE_BAG_KEY);if(raw){const parsed=JSON.parse(raw);if(parsed&&typeof parsed==='object')state={bag:Array.isArray(parsed.bag)?[...new Set(parsed.bag.filter(m=>allModes.includes(m)))]:[],last:allModes.includes(parsed.last)?parsed.last:null};}}catch(error){console.warn('尋寶場景輪替紀錄讀取失敗，改用本次隨機抽選。',error);}
+    if(!state.bag.length){
+      state.bag=[...allModes];
+      for(let i=state.bag.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[state.bag[i],state.bag[j]]=[state.bag[j],state.bag[i]];}
+      if(state.bag.length>1&&state.bag[0]===state.last){const swapIndex=1+Math.floor(Math.random()*(state.bag.length-1));[state.bag[0],state.bag[swapIndex]]=[state.bag[swapIndex],state.bag[0]];}
+    }
+    const mode=state.bag.shift();
+    try{localStorage.setItem(TREASURE_MODE_BAG_KEY,JSON.stringify({bag:state.bag,last:mode}));}catch(error){console.warn('尋寶場景輪替紀錄無法保存。',error);}
+    return mode;
+  }
+  function treasureCreateSession(triggerPlayer){
+    const mode=treasureNextMode(),now=Date.now(),playerScores={};
+    players.forEach(p=>{playerScores[treasurePlayerId(p)]={score:0,foundIds:[],wrong:0,revision:0,completedAt:null,elapsedMs:null,done:false};});
+    return {roomId:onlineGameRoomId||null,id:`treasure-${onlineGameRoomId||'local'}-${now}`,mode,targetOrder:treasureRandomOrder(mode),playerScores,
+      initiatorId:treasurePlayerId(triggerPlayer),ruleStartedAt:now,rulesEndsAt:now+10000,playAt:now+13000,endsAt:now+73000,
+      finished:false,rankings:null,rewardsApplied:false,revision:1};
+  }
+  function showTreasureModal(){if(!treasureGameModal)return;treasureGameModal.classList.remove('is-hidden');if(treasureUiGameId!==treasureGame?.id){treasureUiGameId=treasureGame?.id;treasureRuleStage.classList.remove('is-hidden');treasurePlayStage.classList.add('is-hidden');treasureResultStage.classList.add('is-hidden');}startTreasureClock();}
+  function hideTreasureModal(){if(treasureGameModal)treasureGameModal.classList.add('is-hidden');if(treasureClock){clearInterval(treasureClock);treasureClock=null;}if(treasureNpcTimer){clearTimeout(treasureNpcTimer);treasureNpcTimer=null;}}
+  function applyTreasureGameSnapshot(incoming){
+    if(!incoming||incoming.roomId!==onlineGameRoomId)return;
+    if(treasureGame&&treasureGame.id===incoming.id){const merged=cloneTreasure(incoming);merged.playerScores=merged.playerScores||{};Object.entries(treasureGame.playerScores||{}).forEach(([id,p])=>{const q=merged.playerScores[id];if(!q||Number(p.revision||0)>Number(q.revision||0))merged.playerScores[id]=cloneTreasure(p);});if(Number(treasureGame.revision||0)>Number(merged.revision||0))merged.revision=treasureGame.revision;treasureGame=merged;}else treasureGame=cloneTreasure(incoming);
+    if(treasureGame.finished){busy=true;showTreasureResults();}else{busy=true;showTreasureModal();}
+  }
+  function startTreasureGame(triggerPlayer){
+    busy=true;updateTurnUI();const waiting=new Promise(resolve=>{treasureGameResolve=resolve;});
+    if(!onlineGameChannel||!onlineGameRoomId){treasureGame=treasureCreateSession(triggerPlayer);showTreasureModal();scheduleTreasureNpc();}
+    else if(lobbyIsHost)void hostStartTreasureGame({roomId:onlineGameRoomId,clientId:lobbyClientId,triggerId:treasurePlayerId(triggerPlayer)});
+    else onlineGameChannel.send({type:'broadcast',event:'treasure-start-request',payload:{roomId:onlineGameRoomId,clientId:lobbyClientId,triggerId:treasurePlayerId(triggerPlayer)}}).catch(error=>console.warn('尋寶啟動請求失敗',error));
+    return waiting;
+  }
+  async function hostStartTreasureGame(request){
+    if(!lobbyIsHost||!onlineGameChannel||!onlineGameRoomId||(treasureGame&&!treasureGame.finished))return;
+    const trigger=players.find(p=>treasurePlayerId(p)===request?.triggerId)||players[currentPlayer];treasureGame=treasureCreateSession(trigger);
+    busy=true;updateTurnUI();showTreasureModal();await onlineGameChannel.send({type:'broadcast',event:'treasure-start',payload:{roomId:onlineGameRoomId,game:cloneTreasure(treasureGame)}});await publishOnlineState();scheduleTreasureNpc();
+  }
+  function startTreasureClock(){
+    if(treasureClock)clearInterval(treasureClock);
+    treasureClock=setInterval(()=>{
+      if(!treasureGame||treasureGame.finished)return;const now=Date.now();
+      if(now<treasureGame.rulesEndsAt){treasureRuleStage.classList.remove('is-hidden');treasurePlayStage.classList.add('is-hidden');treasureResultStage.classList.add('is-hidden');treasureRuleCountdown.textContent=String(Math.max(1,Math.ceil((treasureGame.rulesEndsAt-now)/1000)));return;}
+      treasureRuleStage.classList.add('is-hidden');treasurePlayStage.classList.remove('is-hidden');treasureResultStage.classList.add('is-hidden');treasureModeText.textContent=`${treasureGame.mode}｜${treasureModeLabels[treasureGame.mode]}`;
+      const myId=treasureCurrentPlayerId(),mine=treasureProgressFor(myId);
+      treasurePlayerText.textContent=`${players.find(p=>treasurePlayerId(p)===myId)?.label||'玩家'}｜${mine?.score||0} 分`;
+      if(now<treasureGame.playAt){treasureCountdownOverlay.classList.remove('is-hidden');treasureCountdownOverlay.textContent=String(Math.max(1,Math.ceil((treasureGame.playAt-now)/1000)));treasureTimerText.textContent='60秒';}
+      else{treasureCountdownOverlay.classList.add('is-hidden');const seconds=Math.max(0,Math.ceil((treasureGame.endsAt-now)/1000));treasureTimerText.textContent=`${seconds}秒`;if(now>=treasureGame.endsAt&&isTreasureAuthority()&&!treasureFinishBusy)void finalizeTreasureGame();if(isTreasureAuthority())scheduleTreasureNpc();}
+      renderTreasurePlay();
+    },180);
+  }
+  function renderTreasurePlay(){
+    if(!treasureGame||treasureGame.finished)return;treasureCanvas.dataset.mode=treasureGame.mode;const src=`assets/treasure/${treasureGame.mode}.jpeg`;if(treasurePlayImage.getAttribute('src')!==src)treasurePlayImage.src=src;
+    const id=treasureCurrentPlayerId(),progress=treasureProgressFor(id),prompts=treasurePromptIds(progress),promptSet=new Set(prompts);treasurePromptGrid.innerHTML='';
+    for(let i=0;i<6;i++){const itemId=prompts[i],slot=document.createElement('div');slot.className='treasure-prompt'+(itemId?'':' is-empty');slot.textContent=itemId?(treasureTargetById(itemId)?.name||''):'';treasurePromptGrid.appendChild(slot);}
+    treasureHotspots.innerHTML='';const found=new Set(progress.foundIds||[]);
+    treasureCurrentCatalog().forEach(item=>{const [left,top,width,height]=item.box,button=document.createElement('button');button.type='button';button.className='treasure-hotspot'+(found.has(item.id)?' is-found':'')+(promptSet.has(item.id)?' is-current-prompt':'');button.style.left=`${left}%`;button.style.top=`${top}%`;button.style.width=`${width}%`;button.style.height=`${height}%`;button.setAttribute('aria-label',`尋找：${item.name}`);button.addEventListener('click',event=>{event.stopPropagation();if(!found.has(item.id))treasureClick(item.id);});treasureHotspots.appendChild(button);});
+    treasureProgressText.textContent=`${(progress.foundIds||[]).length}/25`;treasureScoreText.textContent=`${progress.score||0} 分`;treasurePlayerText.textContent=`${players.find(p=>treasurePlayerId(p)===id)?.label||'玩家'}｜${progress.score||0} 分`;
+  }
+  function treasureWrongClick(){
+    if(!treasureGame||treasureGame.finished||Date.now()<treasureGame.playAt||Date.now()>=treasureGame.endsAt)return;const now=Date.now();if(now-treasureWrongAt<260)return;treasureWrongAt=now;
+    const id=treasureCurrentPlayerId(),p=treasureProgressFor(id);if(p.done)return;p.wrong=(p.wrong||0)+1;p.score=(p.score||0)-2;p.revision=(p.revision||0)+1;treasureGame.revision=(treasureGame.revision||0)+1;syncTreasureProgress(id,p);renderTreasurePlay();
+  }
+  function treasureClick(targetId){
+    if(!treasureGame||treasureGame.finished||Date.now()<treasureGame.playAt||Date.now()>=treasureGame.endsAt)return;const id=treasureCurrentPlayerId(),p=treasureProgressFor(id);if(p.done)return;
+    if(!treasurePromptIds(p).includes(targetId)){treasureWrongClick();return;}
+    p.foundIds=[...(p.foundIds||[]),targetId];p.score=(p.score||0)+4;p.revision=(p.revision||0)+1;
+    if(p.foundIds.length>=25){p.done=true;p.completedAt=Date.now();p.elapsedMs=Math.max(0,p.completedAt-treasureGame.playAt);}
+    treasureGame.revision=(treasureGame.revision||0)+1;syncTreasureProgress(id,p);renderTreasurePlay();
+  }
+  function syncTreasureProgress(clientId,progress){
+    const payload={roomId:onlineGameRoomId,gameId:treasureGame?.id,clientId,progress:cloneTreasure(progress)};
+    if(onlineGameChannel)onlineGameChannel.send({type:'broadcast',event:'treasure-progress',payload}).catch(error=>console.warn('尋寶分數同步失敗',error));if(lobbyIsHost)scheduleTreasurePersist();
+  }
+  function handleTreasureProgress(payload){
+    if(!treasureGame||payload.gameId!==treasureGame.id||!payload.clientId||!payload.progress)return;const old=treasureProgressFor(payload.clientId);if(Number(payload.progress.revision||0)<=Number(old.revision||0))return;
+    treasureGame.playerScores[payload.clientId]=cloneTreasure(payload.progress);treasureGame.revision=(treasureGame.revision||0)+1;if(lobbyIsHost)scheduleTreasurePersist();if(!treasureGame.finished&&payload.clientId===treasureCurrentPlayerId())renderTreasurePlay();
+  }
+  function scheduleTreasurePersist(){if(!lobbyIsHost||!onlineGameChannel||!treasureGame||treasurePersistTimer)return;treasurePersistTimer=setTimeout(()=>{treasurePersistTimer=null;void publishOnlineState();},650);}
+  function scheduleTreasureNpc(){
+    if(treasureNpcTimer||!isTreasureAuthority()||!treasureGame||treasureGame.finished||Date.now()<treasureGame.playAt)return;
+    const npcs=players.filter(p=>p.controlType==='npc'&&!treasureProgressFor(treasurePlayerId(p)).done);if(!npcs.length)return;
+    treasureNpcTimer=setTimeout(()=>{treasureNpcTimer=null;if(!treasureGame||treasureGame.finished)return;const npc=npcs[Math.floor(Math.random()*npcs.length)],id=treasurePlayerId(npc),p=treasureProgressFor(id);
+      if(Math.random()<.11){p.wrong=(p.wrong||0)+1;p.score=(p.score||0)-2;}else{const choices=treasurePromptIds(p);if(choices.length){p.foundIds=[...(p.foundIds||[]),choices[Math.floor(Math.random()*choices.length)]];p.score=(p.score||0)+4;if(p.foundIds.length>=25){p.done=true;p.completedAt=Date.now();p.elapsedMs=p.completedAt-treasureGame.playAt;}}}
+      p.revision=(p.revision||0)+1;treasureGame.revision=(treasureGame.revision||0)+1;syncTreasureProgress(id,p);scheduleTreasureNpc();
+    },1050+Math.floor(Math.random()*900));
+  }
+  function treasureBonus(p){if((p.foundIds||[]).length!==25)return 0;const seconds=(Number(p.elapsedMs)||60000)/1000;if(seconds<=30)return 20;if(seconds<=40)return 10;if(seconds<=50)return 8;return 6;}
+  async function finalizeTreasureGame(){
+    if(!isTreasureAuthority()||!treasureGame||treasureGame.finished||treasureFinishBusy)return;treasureFinishBusy=true;await wait(900);
+    const ranking=players.map(p=>{const id=treasurePlayerId(p),q=treasureProgressFor(id),bonus=treasureBonus(q);return {clientId:id,label:p.label||'玩家',score:(Number(q.score)||0)+bonus,rawScore:Number(q.score)||0,foundCount:(q.foundIds||[]).length,wrong:Number(q.wrong)||0,bonus,elapsedMs:q.elapsedMs,controlType:p.controlType};})
+      .sort((a,b)=>b.score-a.score||b.foundCount-a.foundCount||a.wrong-b.wrong||(a.elapsedMs??999999)-(b.elapsedMs??999999));
+    if(!treasureGame.rewardsApplied)ranking.forEach((row,index)=>{row.rank=index+1;row.reward=index===0?'生命愛心 +1':index===1?'金幣 +2,000':index===2?'金幣 +500':'無額外獎勵';const p=players.find(x=>treasurePlayerId(x)===row.clientId);if(!p)return;if(index===0)p.lives=(Number(p.lives)||3)+1;else if(index===1)p.coins=(Number(p.coins)||0)+2000;else if(index===2)p.coins=(Number(p.coins)||0)+500;});
+    treasureGame.finished=true;treasureGame.finishedAt=Date.now();treasureGame.rankings=ranking;treasureGame.rewardsApplied=true;treasureGame.revision=(treasureGame.revision||0)+1;renderPlayers();await publishOnlineState();
+    if(onlineGameChannel)await onlineGameChannel.send({type:'broadcast',event:'treasure-finish',payload:{roomId:onlineGameRoomId,gameId:treasureGame.id,game:cloneTreasure(treasureGame),state:serialiseOnlineState()}});
+    showTreasureResults();treasureFinishBusy=false;
+  }
+  function handleTreasureFinish(payload){if(!treasureGame||payload.gameId!==treasureGame.id)return;if(payload.state)applyOnlineState(payload.state,true);if(payload.game)applyTreasureGameSnapshot(payload.game);showTreasureResults();}
+  function showTreasureResults(){
+    if(!treasureGame?.finished)return;busy=true;treasureRuleStage.classList.add('is-hidden');treasurePlayStage.classList.add('is-hidden');treasureResultStage.classList.remove('is-hidden');treasureResultRows.innerHTML='';
+    (treasureGame.rankings||[]).forEach(row=>{const item=document.createElement('div');item.className=`treasure-rank-row rank-${row.rank}`;const place=document.createElement('strong');place.textContent=`第 ${row.rank} 名`;const name=document.createElement('span');name.className='treasure-rank-name';name.textContent=row.label;const score=document.createElement('b');score.textContent=`${row.score} 分｜${row.foundCount}/25`;const reward=document.createElement('small');reward.textContent=row.reward;item.append(place,name,score,reward);treasureResultRows.appendChild(item);});
+    treasureGameModal.classList.remove('is-hidden');if(treasureClock){clearInterval(treasureClock);treasureClock=null;}if(treasureNpcTimer){clearTimeout(treasureNpcTimer);treasureNpcTimer=null;}
+  }
+  function handleTreasureContinue(){const wasWaiting=!!treasureGameResolve;treasureResultDismissedId=treasureGame?.id||null;hideTreasureModal();treasureUiGameId=null;busy=false;updateTurnUI();if(treasureGameResolve){const resolve=treasureGameResolve;treasureGameResolve=null;resolve();}else if(!wasWaiting&&gameStarted&&!gameOver){const active=players[currentPlayer];if(active&&(active.controlType==='local'||(active.controlType==='npc'&&isNpcAuthority())))finishTurn();}}
+  if(treasureCanvas)treasureCanvas.addEventListener('click',event=>{if(event.target.closest('.treasure-hotspot,.treasure-prompt-grid,.treasure-timer,.treasure-progress-pill,.treasure-score-pill,.treasure-countdown-overlay'))return;const rect=treasurePlayImage.getBoundingClientRect();const sceneLimit=treasureGame&&treasureGame.mode==='03'?0.79:0.83;if(event.clientX>=rect.left&&event.clientX<=rect.right&&event.clientY>=rect.top&&event.clientY<rect.top+rect.height*sceneLimit)treasureWrongClick();});
+  if(treasureContinueButton)treasureContinueButton.addEventListener('click',handleTreasureContinue);
+
   window.setMapTime('day');window.getSelectedCharacter=()=>selectedCharacter;window.getTeleportPairs=()=>Array.from(teleportPairs.entries());window.getUsableDuelSkills=player=>usableDuelSkills(player).map(s=>({name:s.name,category:s.category,effect:s.effect,temporary:!!s.temporary}));window.getGameState=()=>({selectedCharacter,players:players.map(p=>({character:p.character,position:p.position,lapsCompleted:p.lapsCompleted||0,controlType:p.controlType,hp:p.hp,baseHP:p.baseHP,lives:p.lives??3,attack:effectiveAttack(p),defense:p.defense,coins:p.coins,skills:p.skills.map(s=>s.name),pauseUses:p.pauseUses})),currentPlayer,round,time:night?'night':'day',busy,pendingTurnAction,pauseActive,gameStarted,availableSkills:availableSkills.map(s=>s.name),duel:!!duelState});
   if(selfStatusToggle&&selfStatusPanel){selfStatusToggle.addEventListener('click',()=>{const collapsed=selfStatusPanel.classList.toggle('is-collapsed');selfStatusToggle.setAttribute('aria-expanded',String(!collapsed));selfStatusToggle.setAttribute('aria-label',collapsed?'展開完整狀態':'收合完整狀態');selfStatusToggle.querySelector('.status-toggle-icon').textContent=collapsed?'▶':'◀';resizeBoard();playTone('click');});}
   window.addEventListener('resize',resizeBoard);if(window.visualViewport)window.visualViewport.addEventListener('resize',resizeBoard);
