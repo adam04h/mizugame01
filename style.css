@@ -894,3 +894,95 @@ button, select { font: inherit; }
 }
 .treasure-canvas[data-mode="01"]{cursor:crosshair}
 .treasure-canvas[data-mode="01"] .treasure-hotspots{pointer-events:none}
+
+
+/* V8.4.3 usability pass: five visible shop items, single-screen treasure UI,
+   clearer tile actions, and a reachable mobile battle-start control. */
+.shop-items{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;}
+.shop-item,.shop-item:nth-child(4),.shop-item:nth-child(5){grid-column:auto;}
+.shop-item{padding:10px 8px 9px;}
+.shop-item-art{height:82px;font-size:clamp(38px,4.2vw,56px);}
+.shop-item-title{font-size:clamp(12px,1.15vw,16px);}
+.shop-item p{font-size:clamp(10px,1vw,13px);min-height:34px;line-height:1.25;}
+.shop-item-price{font-size:clamp(15px,1.55vw,20px);}
+.shop-item-price img{width:20px;height:20px;}
+.shop-window{width:min(1240px,97vw);max-height:96dvh;overflow-y:auto;}
+@media(max-width:900px){
+  .shop-items{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;}
+  .shop-item{grid-column:auto!important;}
+}
+@media(max-width:620px){
+  .shop-items{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  .shop-item{grid-column:auto!important;}
+  .shop-item-art{height:66px;}
+  .shop-item p{font-size:10px;min-height:32px;}
+}
+
+/* Fit the entire treasure play screen in the viewport; no mouse-wheel scrolling. */
+.treasure-game-modal{overflow:hidden!important;padding:6px!important;}
+.treasure-game-frame{
+  width:min(1480px,98vw,calc((100dvh - 116px)*1.49))!important;
+  max-height:calc(100dvh - 10px)!important;
+  overflow:visible!important;
+}
+.treasure-play-stage{
+  display:flex!important;flex-direction:column!important;align-items:stretch!important;
+  width:100%!important;max-height:calc(100dvh - 10px)!important;overflow:hidden!important;
+}
+.treasure-play-heading{flex:0 0 auto;min-height:30px;padding:2px 8px 5px!important;}
+.treasure-canvas{
+  flex:0 1 auto!important;width:100%!important;height:auto!important;max-height:calc(100dvh - 105px)!important;
+  aspect-ratio:2000 / 1342!important;
+}
+.treasure-play-tip{flex:0 0 auto;margin:4px 2px 1px!important;font-size:clamp(10px,.9vw,14px)!important;line-height:1.2!important;}
+.treasure-prompt{
+  font-size:clamp(13px,1.25vw,21px)!important;line-height:1.16!important;
+  padding:3px 6px!important;overflow-wrap:anywhere!important;word-break:normal!important;
+  text-shadow:0 2px 3px #00162d,0 0 8px #00162d!important;
+}
+.treasure-canvas[data-mode="03"] .treasure-prompt{font-size:clamp(13px,1.2vw,20px)!important;}
+@media(max-width:700px){
+  .treasure-game-modal{padding:2px!important;}
+  .treasure-game-frame{width:98vw!important;max-height:99dvh!important;}
+  .treasure-play-stage{max-height:99dvh!important;padding:2px!important;}
+  .treasure-play-heading{gap:4px;padding:1px 3px 3px!important;}
+  .treasure-play-heading strong{font-size:clamp(13px,3.2vw,18px)!important;}
+  .treasure-play-heading span{font-size:clamp(10px,2.5vw,14px)!important;}
+  .treasure-canvas{max-height:calc(100dvh - 90px)!important;}
+  .treasure-prompt{font-size:clamp(11px,2.6vw,16px)!important;padding:2px!important;border-radius:7px!important;}
+  .treasure-canvas[data-mode="03"] .treasure-prompt{font-size:clamp(11px,2.4vw,15px)!important;}
+  .treasure-play-tip{font-size:10px!important;}
+}
+
+/* Gold and skill tiles now show an explicit instruction, not only a thin outline. */
+.board-action-hotspot:not(:disabled){
+  outline:3px solid #fff2a6!important;
+  box-shadow:0 0 0 7px #ffb92866,0 0 26px 10px #ffcf45dd,inset 0 0 0 3px #fff6!important;
+  animation:actionPulseStrong 1.05s ease-in-out infinite!important;
+}
+.board-action-hotspot.pool-ready::after{
+  position:absolute;left:50%;top:-16px;transform:translate(-50%,-100%);
+  display:block;width:max-content;max-width:min(230px,42vw);padding:8px 14px;
+  border:2px solid #fff1a6;border-radius:999px;
+  background:linear-gradient(180deg,#fff0a0,#e89a1b);
+  color:#311900;font-size:clamp(12px,1.1vw,17px);font-weight:1000;line-height:1.15;
+  white-space:nowrap;text-shadow:0 1px #fff8;
+  box-shadow:0 3px 0 #6c3b0b,0 0 18px #ffdf64;pointer-events:none;z-index:12;
+}
+.coin-action-hotspot.pool-ready::after{content:'🪙 點擊領取金幣';}
+.skill-action-hotspot.pool-ready::after{content:'✨ 點擊抽取招式';}
+@keyframes actionPulseStrong{
+  0%,100%{filter:brightness(1);box-shadow:0 0 0 5px #ffb92855,0 0 18px 6px #ffcf45aa,inset 0 0 0 2px #fff5;}
+  50%{filter:brightness(1.28);box-shadow:0 0 0 10px #ffb92888,0 0 34px 14px #ffcf45ee,inset 0 0 0 4px #fff9;}
+}
+
+/* On phones, move the lobby's 開戰 control to the upper-right, away from the status drawer. */
+@media(max-width:900px){
+  .player-panel.game-panel{
+    left:auto!important;right:8px!important;top:8px!important;bottom:auto!important;
+    transform:none!important;width:116px!important;max-width:34vw!important;
+    z-index:80!important;padding:7px 6px!important;
+  }
+  .battle-start-button{position:relative;z-index:82!important;min-height:44px!important;font-size:15px!important;padding:10px 6px!important;}
+  .self-status-panel{z-index:42!important;}
+}
