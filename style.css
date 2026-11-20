@@ -869,3 +869,16 @@ button, select { font: inherit; }
   .treasure-progress-pill{font-size:clamp(11px,1.55vw,16px);}
   .treasure-canvas[data-mode="03"] .treasure-prompt{font-size:clamp(8px,1.0vw,11px);}
 }
+
+
+/* Treasure hunt touch update: clear confirmation marker stays small and never blocks taps. */
+.treasure-found-marker{
+  position:absolute;z-index:3;transform:translate(-50%,-50%);
+  display:grid;place-items:center;width:clamp(18px,2.4vw,34px);height:clamp(18px,2.4vw,34px);
+  border:2px solid #bfffe3;border-radius:50%;background:rgba(4,42,44,.82);
+  color:#eafff6;font-weight:1000;font-size:clamp(12px,1.5vw,21px);
+  line-height:1;text-shadow:0 1px 3px #001;box-shadow:0 0 10px #6fffd488;
+  pointer-events:none;
+}
+.treasure-canvas[data-mode="01"]{cursor:crosshair}
+.treasure-canvas[data-mode="01"] .treasure-hotspots{pointer-events:none}

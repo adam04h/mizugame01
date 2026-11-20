@@ -1385,18 +1385,35 @@
   // V8.4 shared treasure hunt: same random scene/order for the whole room;
   // each human/NPC keeps an independent score and found-object list.
   let treasureGame=null,treasureClock=null,treasureNpcTimer=null,treasurePersistTimer=null;
-  let treasureGameResolve=null,treasureFinishBusy=false,treasureUiGameId=null,treasureWrongAt=0,treasureResultDismissedId=null;
+  let treasureGameResolve=null,treasureFinishBusy=false,treasureUiGameId=null,treasureWrongAt=0,treasureResultDismissedId=null,treasureRenderSignature='',treasureHitTestBusy=false;
   const treasureModeLabels={'01':'海底尋寶','02':'城堡尋寶','03':'森林尋寶'};
   const treasureCatalog={
     '01':[
-      {id:'starfish',name:'海星',box:[2,68,10,13]},{id:'seashell',name:'海螺殼',box:[11,64,8,9]},{id:'pearl-shell',name:'珍珠貝殼',box:[15,68,12,12]},
-      {id:'clownfish',name:'小丑魚',box:[18,50,13,11]},{id:'diving-mask',name:'潛水面鏡',box:[27,41,10,11]},{id:'drift-bottle',name:'綠色漂流瓶',box:[38,31,8,14]},
-      {id:'anchor',name:'鐵錨',box:[74,38,12,17]},{id:'pocket-watch',name:'金色懷錶',box:[56, 44, 8, 11]},{id:'seahorse',name:'海馬',box:[44,31,9,17]},
-      {id:'turtle',name:'海龜',box:[32,10,14,14]},{id:'ship-wheel',name:'古老船舵',box:[63,55,10,12]},{id:'trident',name:'金色三叉戟',box:[40,55,9,15]},
-      {id:'treasure-chest',name:'藏寶箱',box:[24,43,10,15]},{id:'coin-pile',name:'成堆金幣',box:[30,64,10,10]},{id:'magnifier',name:'放大鏡',box:[46, 67, 11, 11]},
-      {id:'jellyfish',name:'發光水母',box:[12,24,13,20]},{id:'octopus',name:'章魚',box:[76,44,11,16]},{id:'submarine',name:'黃色潛水艇模型／玩具',box:[80,49,9,12]},
-      {id:'spyglass',name:'單筒望遠鏡',box:[76, 65, 9, 10]},{id:'treasure-map',name:'古老藏寶圖',box:[87, 62, 9, 11]},{id:'gold-key',name:'金色鑰匙',box:[64, 45, 8, 10]},
-      {id:'red-crab',name:'紅色螃蟹',box:[83,65,11,13]},{id:'urchin',name:'海膽',box:[94,72,5,9]},{id:'underwater-camera',name:'水下相機',box:[77,55,8,10]},{id:'blue-crystal',name:'藍色發光水晶',box:[0,42,8,13]}
+      {id:'tropical-fish',name:'熱帶魚',hit:{x:1708,y:668,w:151,h:125,asset:'assets/treasure/objects/tropical-fish.png'}},
+      {id:'crab',name:'螃蟹',hit:{x:1630,y:1014,w:203,h:122,asset:'assets/treasure/objects/crab.png'}},
+      {id:'pearl-necklace',name:'珍珠項鏈',hit:{x:1798,y:792,w:158,h:134,asset:'assets/treasure/objects/pearl-necklace.png'}},
+      {id:'lantern',name:'油燈',hit:{x:1735,y:135,w:99,h:204,asset:'assets/treasure/objects/lantern.png'}},
+      {id:'gold-pocket-watch',name:'金色懷錶',hit:{x:1173,y:602,w:102,h:135,asset:'assets/treasure/objects/gold-pocket-watch.png'}},
+      {id:'anchor',name:'鐵錨',hit:{x:1594,y:414,w:247,h:315,asset:'assets/treasure/objects/anchor.png'}},
+      {id:'old-spyglass',name:'老舊單筒望遠鏡',hit:{x:1579,y:757,w:174,h:123,asset:'assets/treasure/objects/old-spyglass.png'}},
+      {id:'crown',name:'皇冠',hit:{x:1331,y:335,w:183,h:154,asset:'assets/treasure/objects/crown.png'}},
+      {id:'seahorse',name:'海馬',hit:{x:1075,y:494,w:91,h:164,asset:'assets/treasure/objects/seahorse.png'}},
+      {id:'compass',name:'指南針',hit:{x:1476,y:914,w:113,h:104,asset:'assets/treasure/objects/compass.png'}},
+      {id:'message-bottle',name:'綠色漂流瓶',hit:{x:788,y:427,w:107,h:184,asset:'assets/treasure/objects/message-bottle.png'}},
+      {id:'glowing-shell',name:'發光的貝殼',hit:{x:684,y:931,w:226,h:192,asset:'assets/treasure/objects/glowing-shell.png'}},
+      {id:'clownfish',name:'小丑魚',hit:{x:436,y:770,w:141,h:103,asset:'assets/treasure/objects/clownfish.png'}},
+      {id:'magnifier',name:'放大鏡',hit:{x:1120,y:952,w:191,h:136,asset:'assets/treasure/objects/magnifier.png'}},
+      {id:'hammer',name:'鐵鎚',hit:{x:891,y:883,w:174,h:117,asset:'assets/treasure/objects/hammer.png'}},
+      {id:'ship-wheel',name:'古老船舵',hit:{x:1251,y:746,w:235,h:197,asset:'assets/treasure/objects/ship-wheel.png'}},
+      {id:'sea-turtle',name:'海龜',hit:{x:864,y:180,w:267,h:173,asset:'assets/treasure/objects/sea-turtle.png'}},
+      {id:'vase',name:'花瓶瓷器',hit:{x:1012,y:811,w:137,h:161,asset:'assets/treasure/objects/vase.png'}},
+      {id:'starfish',name:'海星',hit:{x:61,y:897,w:182,h:159,asset:'assets/treasure/objects/starfish.png'}},
+      {id:'silver-key',name:'銀色鑰匙',hit:{x:1340,y:635,w:95,h:105,asset:'assets/treasure/objects/silver-key.png'}},
+      {id:'treasure-chest',name:'藏寶箱',hit:{x:635,y:694,w:146,h:113,asset:'assets/treasure/objects/treasure-chest.png'}},
+      {id:'curved-sword',name:'彎刀',hit:{x:836,y:638,w:147,h:207,asset:'assets/treasure/objects/curved-sword.png'}},
+      {id:'glowing-jellyfish',name:'發光水母',hit:{x:331,y:364,w:197,h:259,asset:'assets/treasure/objects/glowing-jellyfish.png'}},
+      {id:'gold-spyglass',name:'金色單筒望遠鏡',hit:{x:597,y:573,w:203,h:117,asset:'assets/treasure/objects/gold-spyglass.png'}},
+      {id:'pearl-shell',name:'珍珠貝殼',hit:{x:370,y:887,w:204,h:205,asset:'assets/treasure/objects/pearl-shell.png'}}
     ],
     '02':[
       {id:'compass-stair',name:'指南針',box:[3.2, 47, 9.5, 14]},
@@ -1436,6 +1453,55 @@
       {id:'water-flask',name:'水壺／水囊',box:[92, 29, 8, 13]},{id:'mango',name:'熱帶水果／芒果',box:[89, 59, 10, 15]},{id:'wooden-barrel',name:'木桶',box:[0, 52, 7, 14]},{id:'blue-mushrooms',name:'藍光小蘑菇',box:[20, 68, 8, 10]}
     ]
   };
+
+  // Scene 01 uses the supplied transparent cut-outs as exact alpha hit masks.
+  // A small dilation radius around each silhouette makes touch targets forgiving.
+  const treasureHitMaskCache=new Map();
+  const TREASURE_HIT_RADIUS=34;
+  function treasureLoadHitMask(item){
+    if(treasureHitMaskCache.has(item.id))return treasureHitMaskCache.get(item.id);
+    const promise=new Promise(resolve=>{
+      const image=new Image();
+      image.onload=()=>{
+        try{
+          const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
+          const context=canvas.getContext('2d',{willReadFrequently:true});context.drawImage(image,0,0);
+          const pixels=context.getImageData(0,0,canvas.width,canvas.height).data;
+          resolve({width:canvas.width,height:canvas.height,alpha:pixels});
+        }catch(error){console.warn('尋寶物件點擊遮罩讀取失敗',item.id,error);resolve(null);}
+      };
+      image.onerror=()=>{console.warn('尋寶物件素材載入失敗',item.hit.asset);resolve(null);};
+      image.src=item.hit.asset;
+    });
+    treasureHitMaskCache.set(item.id,promise);return promise;
+  }
+  function treasurePreloadHitMasks(){
+    if(treasureGame?.mode==='01')void Promise.all(treasureCatalog['01'].map(treasureLoadHitMask));
+  }
+  async function treasureFindHit01(sceneX,sceneY){
+    const items=treasureCatalog['01'];await Promise.all(items.map(treasureLoadHitMask));
+    let bestId=null,bestDistance=Infinity;
+    for(const item of items){
+      const mask=await treasureHitMaskCache.get(item.id);if(!mask)continue;
+      const localX=Math.round(sceneX-item.hit.x),localY=Math.round(sceneY-item.hit.y);
+      if(localX < -TREASURE_HIT_RADIUS || localY < -TREASURE_HIT_RADIUS ||
+         localX >= mask.width+TREASURE_HIT_RADIUS || localY >= mask.height+TREASURE_HIT_RADIUS)continue;
+      const minX=Math.max(0,localX-TREASURE_HIT_RADIUS),maxX=Math.min(mask.width-1,localX+TREASURE_HIT_RADIUS);
+      const minY=Math.max(0,localY-TREASURE_HIT_RADIUS),maxY=Math.min(mask.height-1,localY+TREASURE_HIT_RADIUS);
+      let itemBest=Infinity;
+      for(let yy=minY;yy<=maxY;yy++){
+        const dy=yy-localY,dy2=dy*dy;if(dy2>bestDistance||dy2>TREASURE_HIT_RADIUS*TREASURE_HIT_RADIUS)continue;
+        for(let xx=minX;xx<=maxX;xx++){
+          const dx=xx-localX,d2=dx*dx+dy2;if(d2>bestDistance||d2>TREASURE_HIT_RADIUS*TREASURE_HIT_RADIUS)continue;
+          if(mask.alpha[(yy*mask.width+xx)*4+3]>32&&d2<itemBest)itemBest=d2;
+          if(itemBest===0)break;
+        }
+        if(itemBest===0)break;
+      }
+      if(itemBest<bestDistance){bestDistance=itemBest;bestId=item.id;}
+    }
+    return bestDistance<=TREASURE_HIT_RADIUS*TREASURE_HIT_RADIUS?bestId:null;
+  }
   function cloneTreasure(value){return value?JSON.parse(JSON.stringify(value)):null;}
   function treasurePlayerId(player){if(player?.onlineClientId)return player.onlineClientId;if(player?.clientId)return player.clientId;const index=players.indexOf(player);return index===0?`local:${lobbyClientId||'offline'}`:`offline-player-${Math.max(0,index)}`;}
   function isTreasureAuthority(){return onlineGameRoomId?!!lobbyIsHost:true;}
@@ -1467,10 +1533,10 @@
     const mode=treasureNextMode(),now=Date.now(),playerScores={};
     players.forEach(p=>{playerScores[treasurePlayerId(p)]={score:0,foundIds:[],wrong:0,revision:0,completedAt:null,elapsedMs:null,done:false};});
     return {roomId:onlineGameRoomId||null,id:`treasure-${onlineGameRoomId||'local'}-${now}`,mode,targetOrder:treasureRandomOrder(mode),playerScores,
-      initiatorId:treasurePlayerId(triggerPlayer),ruleStartedAt:now,rulesEndsAt:now+10000,playAt:now+13000,endsAt:now+73000,
+      initiatorId:treasurePlayerId(triggerPlayer),ruleStartedAt:now,rulesEndsAt:now+10000,playAt:now+13000,endsAt:now+88000,
       finished:false,rankings:null,rewardsApplied:false,revision:1};
   }
-  function showTreasureModal(){if(!treasureGameModal)return;treasureGameModal.classList.remove('is-hidden');if(treasureUiGameId!==treasureGame?.id){treasureUiGameId=treasureGame?.id;treasureRuleStage.classList.remove('is-hidden');treasurePlayStage.classList.add('is-hidden');treasureResultStage.classList.add('is-hidden');}startTreasureClock();}
+  function showTreasureModal(){if(!treasureGameModal)return;treasureGameModal.classList.remove('is-hidden');if(treasureUiGameId!==treasureGame?.id){treasureUiGameId=treasureGame?.id;treasureRenderSignature='';treasureRuleStage.classList.remove('is-hidden');treasurePlayStage.classList.add('is-hidden');treasureResultStage.classList.add('is-hidden');}treasurePreloadHitMasks();startTreasureClock();}
   function hideTreasureModal(){if(treasureGameModal)treasureGameModal.classList.add('is-hidden');if(treasureClock){clearInterval(treasureClock);treasureClock=null;}if(treasureNpcTimer){clearTimeout(treasureNpcTimer);treasureNpcTimer=null;}}
   function applyTreasureGameSnapshot(incoming){
     if(!incoming||incoming.roomId!==onlineGameRoomId)return;
@@ -1497,18 +1563,52 @@
       treasureRuleStage.classList.add('is-hidden');treasurePlayStage.classList.remove('is-hidden');treasureResultStage.classList.add('is-hidden');treasureModeText.textContent=`${treasureGame.mode}｜${treasureModeLabels[treasureGame.mode]}`;
       const myId=treasureCurrentPlayerId(),mine=treasureProgressFor(myId);
       treasurePlayerText.textContent=`${players.find(p=>treasurePlayerId(p)===myId)?.label||'玩家'}｜${mine?.score||0} 分`;
-      if(now<treasureGame.playAt){treasureCountdownOverlay.classList.remove('is-hidden');treasureCountdownOverlay.textContent=String(Math.max(1,Math.ceil((treasureGame.playAt-now)/1000)));treasureTimerText.textContent='60秒';}
+      if(now<treasureGame.playAt){treasureCountdownOverlay.classList.remove('is-hidden');treasureCountdownOverlay.textContent=String(Math.max(1,Math.ceil((treasureGame.playAt-now)/1000)));treasureTimerText.textContent='75秒';}
       else{treasureCountdownOverlay.classList.add('is-hidden');const seconds=Math.max(0,Math.ceil((treasureGame.endsAt-now)/1000));treasureTimerText.textContent=`${seconds}秒`;if(now>=treasureGame.endsAt&&isTreasureAuthority()&&!treasureFinishBusy)void finalizeTreasureGame();if(isTreasureAuthority())scheduleTreasureNpc();}
       renderTreasurePlay();
-    },180);
+    },250);
   }
   function renderTreasurePlay(){
-    if(!treasureGame||treasureGame.finished)return;treasureCanvas.dataset.mode=treasureGame.mode;const src=`assets/treasure/${treasureGame.mode}.jpeg`;if(treasurePlayImage.getAttribute('src')!==src)treasurePlayImage.src=src;
-    const id=treasureCurrentPlayerId(),progress=treasureProgressFor(id),prompts=treasurePromptIds(progress),promptSet=new Set(prompts);treasurePromptGrid.innerHTML='';
-    for(let i=0;i<6;i++){const itemId=prompts[i],slot=document.createElement('div');slot.className='treasure-prompt'+(itemId?'':' is-empty');slot.textContent=itemId?(treasureTargetById(itemId)?.name||''):'';treasurePromptGrid.appendChild(slot);}
-    treasureHotspots.innerHTML='';const found=new Set(progress.foundIds||[]);
-    treasureCurrentCatalog().forEach(item=>{const [left,top,width,height]=item.box,button=document.createElement('button');button.type='button';button.className='treasure-hotspot'+(found.has(item.id)?' is-found':'')+(promptSet.has(item.id)?' is-current-prompt':'');button.style.left=`${left}%`;button.style.top=`${top}%`;button.style.width=`${width}%`;button.style.height=`${height}%`;button.setAttribute('aria-label',`尋找：${item.name}`);button.addEventListener('click',event=>{event.stopPropagation();if(!found.has(item.id))treasureClick(item.id);});treasureHotspots.appendChild(button);});
-    treasureProgressText.textContent=`${(progress.foundIds||[]).length}/25`;treasureScoreText.textContent=`${progress.score||0} 分`;treasurePlayerText.textContent=`${players.find(p=>treasurePlayerId(p)===id)?.label||'玩家'}｜${progress.score||0} 分`;
+    if(!treasureGame||treasureGame.finished)return;
+    treasureCanvas.dataset.mode=treasureGame.mode;
+    const src=`assets/treasure/${treasureGame.mode}.jpeg`;
+    if(treasurePlayImage.getAttribute('src')!==src)treasurePlayImage.src=src;
+    const id=treasureCurrentPlayerId(),progress=treasureProgressFor(id);
+    const signature=[treasureGame.id,treasureGame.mode,id,progress?.revision||0,(progress?.foundIds||[]).length,progress?.score||0].join('|');
+    // The clock ticks four times per second; rebuild the 25 hit targets only when game state changes.
+    if(signature===treasureRenderSignature)return;
+    treasureRenderSignature=signature;
+    const prompts=treasurePromptIds(progress),promptSet=new Set(prompts);
+    treasurePromptGrid.innerHTML='';
+    for(let i=0;i<6;i++){
+      const itemId=prompts[i],slot=document.createElement('div');
+      slot.className='treasure-prompt'+(itemId?'':' is-empty');
+      slot.textContent=itemId?(treasureTargetById(itemId)?.name||''):'';
+      treasurePromptGrid.appendChild(slot);
+    }
+    treasureHotspots.innerHTML='';
+    const found=new Set(progress.foundIds||[]);
+    if(treasureGame.mode==='01'){
+      treasureCurrentCatalog().forEach(item=>{
+        if(!found.has(item.id))return;
+        const mark=document.createElement('span');mark.className='treasure-found-marker';mark.textContent='✓';
+        mark.style.left=`${(item.hit.x+item.hit.w/2)/2000*100}%`;
+        mark.style.top=`${(item.hit.y+item.hit.h/2)/1342*100}%`;
+        treasureHotspots.appendChild(mark);
+      });
+    }else{
+      treasureCurrentCatalog().forEach(item=>{
+        const [left,top,width,height]=item.box,button=document.createElement('button');
+        button.type='button';button.className='treasure-hotspot'+(found.has(item.id)?' is-found':'')+(promptSet.has(item.id)?' is-current-prompt':'');
+        button.style.left=`${left}%`;button.style.top=`${top}%`;button.style.width=`${width}%`;button.style.height=`${height}%`;
+        button.setAttribute('aria-label',`尋找：${item.name}`);
+        button.addEventListener('click',event=>{event.stopPropagation();if(!found.has(item.id))treasureClick(item.id);});
+        treasureHotspots.appendChild(button);
+      });
+    }
+    treasureProgressText.textContent=`${(progress.foundIds||[]).length}/25`;
+    treasureScoreText.textContent=`${progress.score||0} 分`;
+    treasurePlayerText.textContent=`${players.find(p=>treasurePlayerId(p)===id)?.label||'玩家'}｜${progress.score||0} 分`;
   }
   function treasureWrongClick(){
     if(!treasureGame||treasureGame.finished||Date.now()<treasureGame.playAt||Date.now()>=treasureGame.endsAt)return;const now=Date.now();if(now-treasureWrongAt<260)return;treasureWrongAt=now;
@@ -1538,7 +1638,7 @@
       p.revision=(p.revision||0)+1;treasureGame.revision=(treasureGame.revision||0)+1;syncTreasureProgress(id,p);scheduleTreasureNpc();
     },1050+Math.floor(Math.random()*900));
   }
-  function treasureBonus(p){if((p.foundIds||[]).length!==25)return 0;const seconds=(Number(p.elapsedMs)||60000)/1000;if(seconds<=30)return 20;if(seconds<=40)return 10;if(seconds<=50)return 8;return 6;}
+  function treasureBonus(p){if((p.foundIds||[]).length!==25)return 0;const seconds=(Number(p.elapsedMs)||75000)/1000;if(seconds<=30)return 20;if(seconds<=40)return 10;if(seconds<=50)return 8;return 6;}
   async function finalizeTreasureGame(){
     if(!isTreasureAuthority()||!treasureGame||treasureGame.finished||treasureFinishBusy)return;treasureFinishBusy=true;await wait(900);
     const ranking=players.map(p=>{const id=treasurePlayerId(p),q=treasureProgressFor(id),bonus=treasureBonus(q);return {clientId:id,label:p.label||'玩家',score:(Number(q.score)||0)+bonus,rawScore:Number(q.score)||0,foundCount:(q.foundIds||[]).length,wrong:Number(q.wrong)||0,bonus,elapsedMs:q.elapsedMs,controlType:p.controlType};})
@@ -1555,7 +1655,24 @@
     treasureGameModal.classList.remove('is-hidden');if(treasureClock){clearInterval(treasureClock);treasureClock=null;}if(treasureNpcTimer){clearTimeout(treasureNpcTimer);treasureNpcTimer=null;}
   }
   function handleTreasureContinue(){const wasWaiting=!!treasureGameResolve;treasureResultDismissedId=treasureGame?.id||null;hideTreasureModal();treasureUiGameId=null;busy=false;updateTurnUI();if(treasureGameResolve){const resolve=treasureGameResolve;treasureGameResolve=null;resolve();}else if(!wasWaiting&&gameStarted&&!gameOver){const active=players[currentPlayer];if(active&&(active.controlType==='local'||(active.controlType==='npc'&&isNpcAuthority())))finishTurn();}}
-  if(treasureCanvas)treasureCanvas.addEventListener('click',event=>{if(event.target.closest('.treasure-hotspot,.treasure-prompt-grid,.treasure-timer,.treasure-progress-pill,.treasure-score-pill,.treasure-countdown-overlay'))return;const rect=treasurePlayImage.getBoundingClientRect();const sceneLimit=treasureGame&&treasureGame.mode==='03'?0.79:0.83;if(event.clientX>=rect.left&&event.clientX<=rect.right&&event.clientY>=rect.top&&event.clientY<rect.top+rect.height*sceneLimit)treasureWrongClick();});
+  if(treasureCanvas)treasureCanvas.addEventListener('click',event=>{
+    if(event.target.closest('.treasure-hotspot,.treasure-prompt-grid,.treasure-timer,.treasure-progress-pill,.treasure-score-pill,.treasure-countdown-overlay'))return;
+    if(!treasureGame||treasureGame.finished)return;
+    const rect=treasurePlayImage.getBoundingClientRect();
+    const sceneLimit=treasureGame.mode==='01'?0.855:(treasureGame.mode==='03'?0.79:0.83);
+    if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>=rect.top+rect.height*sceneLimit)return;
+    if(treasureGame.mode==='01'){
+      if(treasureHitTestBusy)return;
+      treasureHitTestBusy=true;
+      const sceneX=(event.clientX-rect.left)/rect.width*2000;
+      const sceneY=(event.clientY-rect.top)/rect.height*1342;
+      void treasureFindHit01(sceneX,sceneY).then(targetId=>{
+        if(targetId)treasureClick(targetId);else treasureWrongClick();
+      }).catch(error=>console.warn('尋寶點擊判定失敗',error)).finally(()=>{treasureHitTestBusy=false;});
+      return;
+    }
+    treasureWrongClick();
+  });
   if(treasureContinueButton)treasureContinueButton.addEventListener('click',handleTreasureContinue);
 
   window.setMapTime('day');window.getSelectedCharacter=()=>selectedCharacter;window.getTeleportPairs=()=>Array.from(teleportPairs.entries());window.getUsableDuelSkills=player=>usableDuelSkills(player).map(s=>({name:s.name,category:s.category,effect:s.effect,temporary:!!s.temporary}));window.getGameState=()=>({selectedCharacter,players:players.map(p=>({character:p.character,position:p.position,lapsCompleted:p.lapsCompleted||0,controlType:p.controlType,hp:p.hp,baseHP:p.baseHP,lives:p.lives??3,attack:effectiveAttack(p),defense:p.defense,coins:p.coins,skills:p.skills.map(s=>s.name),pauseUses:p.pauseUses})),currentPlayer,round,time:night?'night':'day',busy,pendingTurnAction,pauseActive,gameStarted,availableSkills:availableSkills.map(s=>s.name),duel:!!duelState});
